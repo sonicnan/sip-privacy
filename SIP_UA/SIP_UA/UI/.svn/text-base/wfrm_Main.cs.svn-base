@@ -1,0 +1,1763 @@
+﻿using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Drawing;
+using System.Windows.Forms;
+using System.Net;
+using System.Threading;
+
+using LumiSoft.Net;
+using LumiSoft.Net.SDP;
+using LumiSoft.Net.SIP;
+using LumiSoft.Net.SIP.Debug;
+using LumiSoft.Net.SIP.Stack;
+using LumiSoft.Net.SIP.Message;
+using LumiSoft.Net.Media;
+using LumiSoft.Net.Media.Codec.Audio;
+using LumiSoft.Net.STUN.Client;
+using LumiSoft.Net.RTP;
+using LumiSoft.Net.RTP.Debug;
+using LumiSoft.SIP.UA;
+using LumiSoft.SIP.UA.Resources;
+
+using LumiSoft.Net.AUTH;
+
+namespace LumiSoft.SIP.UA.UI
+{
+    /// <summary>
+    /// Application main window.
+    /// </summary>
+    public class wfrm_Main : Form
+    {
+        private MenuStrip  m_pMenu        = null;
+        private ComboBox   m_pAccounts    = null;
+        private Button     m_pCall        = null;
+        private Button     m_pIM          = null;
+        private ComboBox   m_pCallUriType = null;
+        private TextBox    m_pCallUri     = null;
+        private TabControl m_pCallTab     = null;
+        private ListView   m_pCallTab_Contacts_Contacts = null;
+        private ListView   m_pCallTab_Calls_Calls = null;
+        private ListView   m_pCallTab_Status_Registrations = null;
+
+        private bool           m_IsDisposing = false;
+        private Settings       m_pSettings   = null;
+        private SIP_Stack      m_pStack      = null;
+        private List<Call>     m_pCalls      = null;
+        private List<wfrm_IM>  m_pActiveIM   = null;        
+        private wfrm_SIP_Debug m_pDebugFrom  = null;
+        private int            m_RtpBasePort = 11000;
+
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        public wfrm_Main()
+        {
+            InitUI();
+
+            m_pSettings = new Settings();
+            m_pStack = new SIP_Stack();
+            m_pStack.UserAgent = "LumiSoft SIP UA 1.0";
+            m_pStack.Error += new EventHandler<ExceptionEventArgs>(Stack_Error);
+            m_pCalls = new List<Call>();
+            m_pActiveIM = new List<wfrm_IM>();
+                        
+            // Show SIP debug UI if in debug mode.
+            if(Program.IsDebug){
+                m_pDebugFrom = new wfrm_SIP_Debug(m_pStack);
+                m_pDebugFrom.Show();
+            }
+        }
+                                                                
+        #region method InitUI
+
+        /// <summary>
+        /// Creates and initializes UI.
+        /// </summary>
+        private void InitUI()
+        {
+            this.ClientSize = new Size(300,400);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.Icon = ResManager.GetIcon("app.ico",new Size(16,16));
+            this.Text = "SIP";
+            this.FormClosed += new FormClosedEventHandler(wfrm_Main_FormClosed);
+            this.VisibleChanged += new EventHandler(wfrm_Main_VisibleChanged);
+
+            m_pMenu = new MenuStrip();
+            ToolStripMenuItem menu_file = new ToolStripMenuItem("File");
+                ToolStripMenuItem menu_file_exit = new ToolStripMenuItem("Exit");
+                menu_file_exit.Tag = "exit";
+                menu_file_exit.Click += new EventHandler(m_pMenu_ItemClicked);
+                menu_file.DropDownItems.Add(menu_file_exit);
+            m_pMenu.Items.Add(menu_file);
+            ToolStripMenuItem menu_settings = new ToolStripMenuItem("Settings");
+                ToolStripMenuItem menu_settings_proxy = new ToolStripMenuItem("Proxy Settings");
+                menu_settings_proxy.Tag = "proxy";
+                menu_settings_proxy.Click += new EventHandler(m_pMenu_ItemClicked);
+                menu_settings.DropDownItems.Add(menu_settings_proxy);
+                ToolStripMenuItem menu_settings_credentials = new ToolStripMenuItem("Credentials");
+                menu_settings_credentials.Tag = "credentials";
+                menu_settings_credentials.Click += new EventHandler(m_pMenu_ItemClicked);
+                menu_settings.DropDownItems.Add(menu_settings_credentials);
+                ToolStripMenuItem menu_settings_accounts = new ToolStripMenuItem("Accounts");
+                menu_settings_accounts.Tag = "accounts";
+                menu_settings_accounts.Click += new EventHandler(m_pMenu_ItemClicked);
+                menu_settings.DropDownItems.Add(menu_settings_accounts);
+            m_pMenu.Items.Add(menu_settings);
+
+            m_pAccounts = new ComboBox();
+            m_pAccounts.Size = new Size(190,20);
+            m_pAccounts.Location = new Point(5,40);
+            m_pAccounts.DropDownStyle = ComboBoxStyle.DropDownList;
+
+            m_pCall = new Button();
+            m_pCall.Size = new Size(45,45);
+            m_pCall.Location = new Point(202,40);
+            m_pCall.Image = ResManager.GetIcon("call.ico",new Size(24,24)).ToBitmap();
+            m_pCall.Click += new EventHandler(m_pCall_Click);
+
+            m_pIM = new Button();
+            m_pIM.Size = new Size(45,45);
+            m_pIM.Location = new Point(250,40);
+            m_pIM.Image = ResManager.GetIcon("im.ico",new Size(24,24)).ToBitmap();
+            m_pIM.Click += new EventHandler(m_pIM_Click);
+
+            m_pCallUriType = new ComboBox();
+            m_pCallUriType.Size = new Size(45,20);
+            m_pCallUriType.Location = new Point(5,65);
+            m_pCallUriType.Items.Add("sip:");
+            m_pCallUriType.SelectedIndex = 0;
+
+            m_pCallUri = new TextBox();
+            m_pCallUri.Size = new Size(145,20);
+            m_pCallUri.Location = new Point(50,65);
+                        
+            m_pCallTab = new TabControl();
+            m_pCallTab.Size = new Size(300,300);
+            m_pCallTab.Location = new Point(0,100);
+            m_pCallTab.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            m_pCallTab.TabPages.Add("contacts","Contacts");
+            m_pCallTab.TabPages.Add("calls","Active Calls");
+            m_pCallTab.TabPages.Add("history","History");
+            m_pCallTab.TabPages.Add("status","Status");
+
+            #region Contacts tab
+
+            m_pCallTab.TabPages["contacts"].BackColor = Color.White;
+
+            m_pCallTab_Contacts_Contacts = new ListView();
+            m_pCallTab_Contacts_Contacts.Size = new Size(260,200);
+            m_pCallTab_Contacts_Contacts.Location = new Point(0,0);
+            m_pCallTab_Contacts_Contacts.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            m_pCallTab_Contacts_Contacts.BorderStyle = BorderStyle.None;
+            m_pCallTab_Contacts_Contacts.View = View.Details;
+            m_pCallTab_Contacts_Contacts.FullRowSelect = true;
+            m_pCallTab_Contacts_Contacts.HeaderStyle = ColumnHeaderStyle.None;
+            m_pCallTab_Contacts_Contacts.MouseUp += new MouseEventHandler(m_pCallTab_Contacts_Contacts_MouseUp);
+            m_pCallTab_Contacts_Contacts.Columns.Add("Name",240);
+
+            m_pCallTab.TabPages["contacts"].Controls.Add(m_pCallTab_Contacts_Contacts);
+
+            #endregion
+
+            #region Acive calls tab
+
+            m_pCallTab.TabPages["calls"].BackColor = Color.White;
+
+            m_pCallTab_Calls_Calls = new ListView();
+            m_pCallTab_Calls_Calls.Size = new Size(260,200);
+            m_pCallTab_Calls_Calls.Location = new Point(0,0);
+            m_pCallTab_Calls_Calls.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            m_pCallTab_Calls_Calls.BorderStyle = BorderStyle.None;
+            m_pCallTab_Calls_Calls.View = View.Details;
+            m_pCallTab_Calls_Calls.FullRowSelect = true;
+            m_pCallTab_Calls_Calls.MouseUp += new MouseEventHandler(m_pCallTab_Calls_Calls_MouseUp);
+            m_pCallTab_Calls_Calls.Columns.Add("Status",80);
+            m_pCallTab_Calls_Calls.Columns.Add("Local Uri",140);
+            m_pCallTab_Calls_Calls.Columns.Add("Remote Uri",140);
+
+            m_pCallTab.TabPages["calls"].Controls.Add(m_pCallTab_Calls_Calls);
+
+            #endregion
+
+            #region Status tab
+
+            m_pCallTab.TabPages["status"].BackColor = Color.White;
+
+            ImageList callTab_Satus_RegistrationsImages = new ImageList();
+            callTab_Satus_RegistrationsImages.Images.Add(ResManager.GetIcon("register_ok.ico",new Size(16,16)));
+            callTab_Satus_RegistrationsImages.Images.Add(ResManager.GetIcon("register_error.ico",new Size(16,16)));
+            callTab_Satus_RegistrationsImages.Images.Add(ResManager.GetIcon("register_registering.ico",new Size(16,16)));
+
+            m_pCallTab_Status_Registrations = new ListView();
+            m_pCallTab_Status_Registrations.Size = new Size(260,200);
+            m_pCallTab_Status_Registrations.Location = new Point(0,0);
+            m_pCallTab_Status_Registrations.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            m_pCallTab_Status_Registrations.BorderStyle = BorderStyle.None;
+            m_pCallTab_Status_Registrations.View = View.Details;
+            m_pCallTab_Status_Registrations.FullRowSelect = true;
+            m_pCallTab_Status_Registrations.ShowItemToolTips = true;
+            m_pCallTab_Status_Registrations.SmallImageList = callTab_Satus_RegistrationsImages;
+            m_pCallTab_Status_Registrations.Columns.Add("Registraion",180);
+            m_pCallTab_Status_Registrations.Columns.Add("Status",80);
+
+            m_pCallTab.TabPages["status"].Controls.Add(m_pCallTab_Status_Registrations);
+
+            #endregion
+
+            this.Controls.Add(m_pMenu);
+            this.Controls.Add(m_pAccounts);
+            this.Controls.Add(m_pIM);
+            this.Controls.Add(m_pCallUriType);
+            this.Controls.Add(m_pCallUri);
+            this.Controls.Add(m_pCall);
+            this.Controls.Add(m_pCallTab);
+
+            m_pCallTab.SelectedTab = m_pCallTab.TabPages["status"];
+        }
+                                                                                                
+        #endregion
+
+        // TODO: Create media session offerless INVITE ACK request.
+
+        #region Events handling
+
+        #region method m_pMenu_ItemClicked
+
+        /// <summary>
+        /// This method is called when main menu item clicked.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void m_pMenu_ItemClicked(object sender,EventArgs e)
+        {
+            ToolStripMenuItem item = (ToolStripMenuItem)sender;
+
+            if(item.Tag == null){
+                return;
+            }
+            else if(item.Tag.ToString() == "accounts"){
+                wfrm_Settings_Accounts frm = new wfrm_Settings_Accounts();
+                if(frm.ShowDialog(this) == DialogResult.OK){
+                    Restart();
+                }
+            }
+            else if(item.Tag.ToString() == "exit"){
+                this.Close();
+            }
+        }
+
+        #endregion
+
+        #region method m_pCall_Click
+
+        /// <summary>
+        /// This method is called when call button is pressed.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void m_pCall_Click(object sender,EventArgs e)
+        {
+            if(m_pCallUri.Text == string.Empty){
+                MessageBox.Show(this,"Please fill call URI !","Error:",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                return;
+            }
+
+            string uri = m_pCallUri.Text;
+            if(uri.IndexOf(':') == -1){
+                uri = "sip:" + uri;
+            }
+
+            Call(((Account)((WComboBoxItem)m_pAccounts.SelectedItem).Tag),new SIP_t_NameAddress(uri));
+            m_pCallUri.Text = "";
+            m_pCallTab.SelectedTab = m_pCallTab.TabPages["calls"];
+        }
+
+        #endregion
+
+        #region method m_pIM_Click
+
+        /// <summary>
+        /// This method is called when IM button is clicked.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void m_pIM_Click(object sender,EventArgs e)
+        {
+            if(m_pCallUri.Text == string.Empty){
+                MessageBox.Show(this,"Please fill call URI !","Error:",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                return;
+            }
+
+            string uri = m_pCallUri.Text;
+            if(uri.IndexOf(':') == -1){
+                uri = "sip:" + uri;
+            }
+
+            OpenIM(((Account)((WComboBoxItem)m_pAccounts.SelectedItem).Tag),new SIP_t_NameAddress(uri));
+
+            m_pCallUri.Text = "";
+        }
+
+        #endregion
+
+        #region method wfrm_Main_FormClosed
+
+        /// <summary>
+        /// This method is called when main form is closed.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void wfrm_Main_FormClosed(object sender,FormClosedEventArgs e)
+        {
+            m_IsDisposing = true;
+            if(m_pDebugFrom != null){
+                m_pDebugFrom.Close();
+            }
+            m_pStack.Stop();
+            m_pStack.Dispose();
+        }
+
+        #endregion
+
+        #region method wfrm_Main_VisibleChanged
+
+        /// <summary>
+        /// This method is called when main windows visibility changes.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void wfrm_Main_VisibleChanged(object sender, EventArgs e)
+        {
+            if(this.Visible){
+                LoadSettings();
+            }
+        }
+
+        #endregion
+
+        #region method IM_FormClosed
+
+        /// <summary>
+        /// This method is called when IM window has closed.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void IM_FormClosed(object sender,FormClosedEventArgs e)
+        {
+            m_pActiveIM.Remove((wfrm_IM)sender);
+        }
+
+        #endregion
+
+
+        #region method m_pCallTab_Contacts_Contacts_MouseUp
+
+        /// <summary>
+        /// This method is called when contacts list mouse button is released.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void m_pCallTab_Contacts_Contacts_MouseUp(object sender,MouseEventArgs e)
+        {
+            if(e.Button != MouseButtons.Right){
+                return;
+            }
+
+            ContextMenuStrip menu = new ContextMenuStrip();
+
+            ToolStripMenuItem menu_Add = new ToolStripMenuItem("New Contact");
+            menu_Add.Click += new EventHandler(delegate(object s1,EventArgs e1){
+                // TODO:
+            });
+            menu.Items.Add(menu_Add);
+
+            if(m_pCallTab_Contacts_Contacts.SelectedItems.Count > 0){
+                menu.Items.Add(new ToolStripSeparator());
+
+                ToolStripMenuItem menu_Call = new ToolStripMenuItem("Call");
+                menu_Call.Click += new EventHandler(delegate(object s1,EventArgs e1){
+                    // TODO:
+                    // FIX ME:
+
+                    string uri = m_pCallTab_Contacts_Contacts.SelectedItems[0].Text;
+                    if(uri.IndexOf(':') == -1){
+                        uri = "sip:" + uri;
+                    }
+                    m_pCallTab.SelectedTab = m_pCallTab.TabPages["calls"];
+
+                    Call(((Account)((WComboBoxItem)m_pAccounts.SelectedItem).Tag),new SIP_t_NameAddress(uri));
+                });
+                menu.Items.Add(menu_Call);
+
+                ToolStripMenuItem menu_IM = new ToolStripMenuItem("IM");
+                menu_IM.Click += new EventHandler(delegate(object s1,EventArgs e1){
+                    // TODO:
+                    // FIX ME:
+
+                    string uri = m_pCallTab_Contacts_Contacts.SelectedItems[0].Text;
+                    if(uri.IndexOf(':') == -1){
+                        uri = "sip:" + uri;
+                    }
+
+                    OpenIM(((Account)((WComboBoxItem)m_pAccounts.SelectedItem).Tag),new SIP_t_NameAddress(uri));
+                });
+                menu.Items.Add(menu_IM);
+            }
+
+            menu.Show(m_pCallTab_Contacts_Contacts,e.Location);
+        }
+
+        #endregion
+
+
+        #region method m_pCallTab_Calls_Calls_MouseUp
+
+        /// <summary>
+        /// This method is called when calls list mouse button is released.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void m_pCallTab_Calls_Calls_MouseUp(object sender,MouseEventArgs e)
+        {
+            if(e.Button != MouseButtons.Right){
+                return;
+            }
+
+            if(m_pCallTab_Calls_Calls.SelectedItems.Count > 0){
+                Call call = (Call)m_pCallTab_Calls_Calls.SelectedItems[0].Tag;
+
+                ContextMenuStrip menu = new ContextMenuStrip();
+                if(call.State == CallState.WaitingToAccept){
+                    // Accept
+                    ToolStripMenuItem accept = new ToolStripMenuItem("Accept");
+                    accept.Click += new EventHandler(delegate(object s1,EventArgs e1){
+                        AcceptCall(call);
+                    });
+                    menu.Items.Add(accept);                   
+                }
+                if(call.State == CallState.Active){
+                    bool onHold = false;
+                    if(call.Tags.ContainsKey("OnHold")){
+                        onHold = ((bool)call.Tags["OnHold"]);
+                    }
+
+                    if(onHold){
+                        // Take off on hold
+                        ToolStripMenuItem putOnHold = new ToolStripMenuItem("Take Off On Hold");
+                        putOnHold.Image = ResManager.GetIcon("call_hangup.ico",new Size(16,16)).ToBitmap();
+                        putOnHold.Click += new EventHandler(delegate(object s1,EventArgs e1){
+                            ToggleCallOnHold(call);
+                        });
+                        menu.Items.Add(putOnHold);
+                    }
+                    else{
+                        // Put on hold
+                        ToolStripMenuItem putOnHold = new ToolStripMenuItem("Put On Hold");
+                        putOnHold.Image = ResManager.GetIcon("call_hangup.ico",new Size(16,16)).ToBitmap();
+                        putOnHold.Click += new EventHandler(delegate(object s1,EventArgs e1){
+                            ToggleCallOnHold(call);
+                        });
+                        menu.Items.Add(putOnHold);
+                    }
+                }
+                // Separator
+                if(menu.Items.Count > 0){
+                    menu.Items.Add(new ToolStripSeparator());
+                }
+                // Hang Up
+                ToolStripMenuItem hangUp = new ToolStripMenuItem("Hang Up");
+                hangUp.Image = ResManager.GetIcon("call_hangup.ico",new Size(16,16)).ToBitmap();
+                hangUp.Click += new EventHandler(delegate(object s1,EventArgs e1){
+                    call.Terminate("Hang Up");
+                });                
+                menu.Items.Add(hangUp);
+                //--------
+                menu.Show(m_pCallTab_Calls_Calls,e.Location);
+            }
+        }
+                
+        #endregion
+
+
+        #region method Registration_StateChanged
+
+        /// <summary>
+        /// This method is called when registration state has changed.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void Registration_StateChanged(object sender,EventArgs e)
+        {   
+            if(m_IsDisposing){                
+                return;
+            }
+
+            try{
+                this.BeginInvoke(
+                    new MethodInvoker(delegate(){
+                        SIP_UA_Registration registration = (SIP_UA_Registration)sender;
+            
+                        // Remove registration.
+                        if(registration.State == SIP_UA_RegistrationState.Disposed){
+                            foreach(ListViewItem it in m_pCallTab_Status_Registrations.Items){
+                                if(it.Text == registration.AOR){
+                                    it.Remove();
+                                    break;
+                                }
+                            }
+                        }
+                        // Update registration state.
+                        else{
+                            ListViewItem regItem = null;
+                            foreach(ListViewItem it in m_pCallTab_Status_Registrations.Items){
+                                if(it.Text == registration.AOR){
+                                    regItem = it;
+                                    break;
+                                }
+                            }
+
+                            // New registration, create it to UI.
+                            if(regItem == null){
+                                regItem = new ListViewItem(registration.AOR);                    
+                                regItem.SubItems.Add("");
+                                m_pCallTab_Status_Registrations.Items.Add(regItem);
+                            }
+
+                            if(registration.State == SIP_UA_RegistrationState.Registered){
+                                regItem.ImageIndex = 0;
+
+                                StringBuilder tooltipText = new StringBuilder();
+                                tooltipText.AppendLine("AOR: " + registration.AOR);
+                                tooltipText.AppendLine("TTL: " + registration.Expires);
+                                foreach(AbsoluteUri contactUri in registration.Contacts){
+                                    tooltipText.AppendLine("Contact: " + contactUri.ToString());
+                                }
+
+                                regItem.ToolTipText = tooltipText.ToString();
+                            }
+                            else if(registration.State == SIP_UA_RegistrationState.Error){
+                                regItem.ImageIndex = 1;
+
+                                //regItem.ToolTipText
+                            }
+                            else if(registration.State == SIP_UA_RegistrationState.Registering){
+                                regItem.ImageIndex = 2;
+                            }
+                            else{
+                                regItem.ImageIndex = -1;
+                            }
+                            regItem.SubItems[1].Text = registration.State.ToString();                            
+                        }
+                    }),
+                    null
+                );
+            }
+             catch(Exception x){
+                string dummy = x.Message;
+                // Skip, UA closing.
+            }
+        }
+
+        #endregion
+
+        #region method Call_StateChanged
+
+        /// <summary>
+        /// This method is called when call state has changed.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void Call_StateChanged(object sender,EventArgs e)
+        {
+            Call call = (Call)sender;
+                       
+            // Update call status.
+            this.BeginInvoke(
+                new MethodInvoker(delegate(){
+                    foreach(ListViewItem it in m_pCallTab_Calls_Calls.Items){
+                        // We found matching call.
+                        if(call.Equals(it.Tag)){
+                            if(call.State == CallState.Active){
+                                // Show RTP debug UI.
+                                if(Program.IsDebug){ 
+                                    Application.OpenForms[0].BeginInvoke(new MethodInvoker(delegate(){
+                                        wfrm_RTP_Debug rtpDebug = new wfrm_RTP_Debug(((MediaSession)call.Tags["MediaSession"]).RTP);
+                                        rtpDebug.Show();
+                                    }));
+                                }
+                            }
+
+                            if(call.State == CallState.Terminated || call.State == CallState.Disposed){
+                                it.Remove();
+
+                                if(call.Tags.ContainsKey("MediaSession")){
+                                    MediaSession mediaSession = (MediaSession)call.Tags["MediaSession"];
+                                    mediaSession.RTP.Dispose();
+                                    call.Tags.Remove("MediaSession");
+                                }
+                            }
+                            else{
+                                it.Text = call.State.ToString();
+                            }
+                            break;
+                        }                       
+                    }
+                }),
+                null
+            );
+        }
+
+        #endregion
+
+        #region method Call_MediaAnswer
+
+        /// <summary>
+        /// This method is called when media answer is received from remote party to our media offer.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void Call_MediaAnswer(object sender,EventArgs<SDP_Message> e)
+        {            
+            Call call = (Call)sender;
+
+            ProcessSdpAnswer(call,e.Value);
+        }
+
+        #endregion
+
+        #region method Call_RequestReceived
+
+        private void Call_RequestReceived(object sender,SIP_RequestReceivedEventArgs e)
+        {
+            Call call = (Call)sender;
+
+            try{
+                if(e.Request.RequestLine.Method == SIP_Methods.INVITE){
+                    // Check that re-INVITE has SDP offer.
+                    if(e.Request.ContentType != null && e.Request.ContentType.ToLower().IndexOf("application/sdp") == -1){
+                        e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x400_Bad_Request + ": SDP offer is missing.",e.Request));
+
+                        return;
+                    }
+
+                    SDP_Message  sdpOffer     = SDP_Message.Parse(Encoding.UTF8.GetString(e.Request.Data));
+                    MediaSession mediaSession = (MediaSession)call.Tags["MediaSession"];
+
+                    // SDP offer may not have less media streams than current session have.
+                    if(mediaSession.MediaStreams.Count < sdpOffer.MediaDescriptions.Count){
+                        e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x400_Bad_Request + ": SDP offer has less media descriptions than last offer.",e.Request));
+
+                        return;
+                    }
+
+                    // Currently we don't allow to add new media streams.
+                    if(mediaSession.MediaStreams.Count != sdpOffer.MediaDescriptions.Count){
+                        e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x488_Not_Acceptable_Here,e.Request));
+
+                        return;
+                    }
+
+                    // Remote party didn't changed media, this is session-refresh request.
+                    // Just replay with current SDP.
+                    if(mediaSession.RemoteSdpVersion == sdpOffer.Origin.SessionVersion){
+                        SIP_Response response = m_pStack.CreateResponse(SIP_ResponseCodes.x200_Ok,e.Request);
+                        response.ContentType = "application/sdp";
+                        response.Data = CreateSDP(mediaSession,false).ToByte(); // FIX ME: "false".
+
+                        e.ServerTransaction.SendResponse(response);
+
+                        return;
+                    }
+                    else{
+                        ProcessSdpOffer(call,sdpOffer);
+
+                        SIP_Response response = m_pStack.CreateResponse(SIP_ResponseCodes.x200_Ok,e.Request);
+                        response.ContentType = "application/sdp";
+                        response.Data = CreateSDP(mediaSession,false).ToByte(); // FIX ME: "false".
+
+                        e.ServerTransaction.SendResponse(response);
+                    }
+                }
+                else{
+                    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x603_Decline,e.Request));
+                }
+            }
+            catch(Exception x){
+                e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x500_Server_Internal_Error + ": " + x.Message,e.Request));
+            }
+        }
+
+        #endregion
+
+        #region method m_pUA_RequestReceived
+
+        /// <summary>
+        /// This method is called when UA get new incoming request.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void m_pUA_RequestReceived(object sender,SIP_RequestReceivedEventArgs e)
+        {            
+            try{
+                #region Validate request-URI
+
+                /* Block rules.
+                    *) Block non SIP URI.
+                    *) Block non local AOR.
+                */
+                                
+                if(!(e.Request.RequestLine.Uri is SIP_Uri)){
+                    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x416_Unsupported_URI_Scheme,e.Request));
+
+                    return;
+                }
+                SIP_Uri requestUri = (SIP_Uri)e.Request.RequestLine.Uri;
+
+                // If request URI is our registration contact, get AOR for it.
+                string aor = requestUri.Address;
+                foreach(SIP_UA_Registration registration in m_pStack.Registrations){                    
+                    foreach(AbsoluteUri contactUri in registration.Contacts){
+                        if(requestUri.Equals(contactUri)){
+                            aor = registration.AOR;
+                            break;
+                        }
+                    }
+                }
+                Account localAccount = null;
+                foreach(WComboBoxItem it in m_pAccounts.Items){
+                    Account account = (Account)it.Tag;
+                    if(string.Equals(account.AOR,aor,StringComparison.InvariantCultureIgnoreCase)){
+                        localAccount = account;
+                        break;
+                    }
+                }
+                if(localAccount == null){
+                    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x404_Not_Found,e.Request));
+
+                    return;
+                }
+
+                #endregion
+
+
+                #region MESSAGE
+
+                if(e.Request.RequestLine.Method == SIP_Methods.MESSAGE){
+                    wfrm_IM frmIM = null;
+
+                    // If active IM window, use it.
+                    foreach(wfrm_IM frm in m_pActiveIM){
+                        if(frm.TargetURI.Uri.ToString() == e.Request.From.Address.Uri.ToString()){
+                            frmIM = frm;
+                            break;
+                        }
+                    }
+                    if(frmIM == null){
+                        // See if in contacts list
+                            // Open IM window
+                            // Ask user to allow/block contact
+                      
+                        this.Invoke(
+                            new MethodInvoker(delegate(){
+                                frmIM = OpenIM(localAccount,e.Request.From.Address);
+                            }),
+                            null
+                        );
+                    }
+
+                    frmIM.ProcessIM(e.Request);
+                
+                    // Send 200 response.
+                    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x200_Ok,e.Request));
+                }
+
+                #endregion
+
+                #region INVITE
+
+                else if(e.Request.RequestLine.Method == SIP_Methods.INVITE){
+                    /* If we get INVITE here, this means we have new call, all re-INVITE are
+                       handled by INVITE dialog.
+                    */
+
+                    // Create and initialize call.
+                    Call call = new Call(m_pStack,e.ServerTransaction);
+                    call.Tags.Add("Account",localAccount);
+                    call.StateChanged += new EventHandler(Call_StateChanged);
+                    call.Error += new EventHandler<ExceptionEventArgs>(delegate(object s1,ExceptionEventArgs e1){
+                        OnError(e1.Exception);
+                    });
+                    m_pCalls.Add(call);
+
+                    // Add call to calls list(UI).                
+                    this.Invoke(
+                        new MethodInvoker(delegate(){                    
+                            ListViewItem it = new ListViewItem(call.State.ToString());
+                            it.SubItems.Add(call.LocalUri.ToString());
+                            it.SubItems.Add(call.RemoteUri.ToString());
+                            it.Tag = call;
+                            m_pCallTab_Calls_Calls.Items.Add(it);
+                        }),
+                        null
+                    );
+
+                    /* RFC 3261 13.3.1.
+                        If the INVITE does not contain a session description, the UAS is
+                        being asked to participate in a session, and the UAC has asked that
+                        the UAS provide the offer of the session.  It MUST provide the offer
+                        in its first non-failure reliable message back to the UAC.  In this
+                        specification, that is a 2xx response to the INVITE.
+                    */
+
+                    // INVITE has media offer.
+                    if(e.Request.ContentType != null && e.Request.ContentType.ToLower().IndexOf("application/sdp") > -1){
+                        SDP_Message sdpOffer = SDP_Message.Parse(Encoding.UTF8.GetString(e.Request.Data));
+                        
+                        bool canSupportOffer = false;
+                        // Check if i can accept at least 1 media stream from offer.
+                        foreach(SDP_MediaDescription media in sdpOffer.MediaDescriptions){
+                            // RTP audio stream.
+                            if(string.Equals(media.MediaType,SDP_MediaTypes.audio,StringComparison.InvariantCultureIgnoreCase) && string.Equals(media.Protocol,"RTP/AVP",StringComparison.InvariantCultureIgnoreCase)){
+                                // See if we can support any payload.
+                                foreach(string payload in media.MediaFormats){
+                                    if(payload == "0" || payload == "8"){
+                                        canSupportOffer = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        // We can support offer, reject call.
+                        if(!canSupportOffer){
+                            call.Reject(SIP_ResponseCodes.x488_Not_Acceptable_Here);
+
+                            return;
+                        }
+
+                        // Store offer and answer to call.
+                        call.Tags.Add("SDP_Offer",sdpOffer);
+                    }
+                                        
+                    // Notify remote party that we ring.
+                    call.SendRinging(null);
+                }
+
+                #endregion
+
+                #region CANCEL
+
+                else if(e.Request.RequestLine.Method == SIP_Methods.CANCEL){
+                    /* RFC 3261 9.2.
+                        If the UAS did not find a matching transaction for the CANCEL
+                        according to the procedure above, it SHOULD respond to the CANCEL
+                        with a 481 (Call Leg/Transaction Does Not Exist).
+                  
+                        Regardless of the method of the original request, as long as the
+                        CANCEL matched an existing transaction, the UAS answers the CANCEL
+                        request itself with a 200 (OK) response.
+                    */
+
+                    SIP_ServerTransaction trToCancel = m_pStack.TransactionLayer.MatchCancelToTransaction(e.Request);
+                    if(trToCancel != null){
+                        trToCancel.Cancel();
+                        e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x200_Ok,e.Request));
+                    }
+                    else{
+                        e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x481_Call_Transaction_Does_Not_Exist,e.Request));
+                    }
+                }
+
+                #endregion
+
+                #region BYE
+
+                else if(e.Request.RequestLine.Method == SIP_Methods.BYE){
+                    /* RFC 3261 15.1.2.
+                        If the BYE does not match an existing dialog, the UAS core SHOULD generate a 481
+                        (Call/Transaction Does Not Exist) response and pass that to the server transaction.
+                    */
+
+                    // Currently we match BYE to dialog and it processes it, is this good idea ?
+                    // So BYE what reaches here doesnt match to any dialog.
+
+                    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x481_Call_Transaction_Does_Not_Exist,e.Request));
+                }
+
+                #endregion
+
+                #region Other
+
+                else{
+                    // ACK is response less method.
+                    if(e.Request.RequestLine.Method != SIP_Methods.ACK){
+                        e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x501_Not_Implemented,e.Request));
+                    }
+                }
+
+                #endregion
+            }
+            catch(Exception x){
+                e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x500_Server_Internal_Error,e.Request));
+
+                OnError(x);
+            }
+        }
+
+        #endregion
+
+        #region method Stack_Error
+
+        /// <summary>
+        /// Is called when SIP stack has unhandled error.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void Stack_Error(object sender,ExceptionEventArgs e)
+        {
+            // TODO:
+
+            Console.WriteLine("Error: " + e.Exception.ToString());
+        }
+
+        #endregion
+
+        #endregion
+
+
+        #region method Call
+
+        /// <summary>
+        /// Calls to the specified person.
+        /// </summary>
+        /// <param name="account">Local account to use.</param>
+        /// <param name="to">Call target address.</param>
+        /// <exception cref="ArgumentNullException">Is raised when <b>account</b> or <b>to</b> is null reference.</exception>
+        public void Call(Account account,SIP_t_NameAddress to)
+        {
+            if(account == null){
+                throw new ArgumentNullException("account");
+            }
+            if(to == null){
+                throw new ArgumentNullException("to");
+            }
+
+            bool sips = false;
+            if(string.Equals(to.Uri.Scheme,"sips",StringComparison.InvariantCultureIgnoreCase)){
+                sips = true;
+            }
+
+            MediaSession mediaSession = new MediaSession();            
+            mediaSession.LocalSdpVersion = 1;
+            mediaSession.LocalHost = GetLocalIP().ToString();
+            mediaSession.RTP = new RTP_MultimediaSession(RTP_Utils.GenerateCNAME());
+            
+            // Add 1 audio stream.
+            RTP_Session rtpSession = mediaSession.RTP.CreateSession(GetLocalRtpEP(),new RTP_Clock(new Random().Next(),8000));
+            rtpSession.Payloads.Add(0,new PCMU());
+            rtpSession.Payloads.Add(8,new PCMA());
+            
+            MediaStream audioStream = new MediaStream(true,SDP_MediaTypes.audio,"RTP/AVP");
+            audioStream.MediaFormats.AddRange(new string[]{"0","8"});
+            audioStream.RtpSession  = rtpSession;
+            audioStream.PublicRtpEP = GetRtpPublicEP(account,audioStream.RtpSession.LocalEP);
+            mediaSession.MediaStreams.Add(audioStream);
+                        
+            SDP_Message sdpOffer = CreateSDP(mediaSession,false);
+
+            // Create invite.
+            SIP_Request invite = m_pStack.CreateRequest(SIP_Methods.INVITE,to,new SIP_t_NameAddress(account.DisplayName,AbsoluteUri.Parse((sips ? "sips:" : "sip:") + account.AOR)));
+            if(account.UseProxy){
+                invite.Route.Add("<" + account.ProxyServer + ";lr>");
+            }
+            invite.ContentType = "application/sdp";
+            invite.Data        = sdpOffer.ToByte();
+            
+            // Create and initialize call.
+            RTP_AudioSender audioSender = new RTP_AudioSender(rtpSession.CreateSendStream());
+            audioSender.Source = new AudioIn(AudioIn.Devices[0],8000,16,1);
+
+            Call call = new Call(m_pStack,invite);
+            call.Tags.Add("Account",account);
+            call.Tags.Add("MediaSession",mediaSession);
+            call.Tags.Add("AudioReceiver",new RTP_AudioPlayer(AudioOut.Devices[0],rtpSession));
+            call.Tags.Add("AudioSender",audioSender);
+            call.Tags.Add("AudioIn",audioSender.Source);
+            call.StateChanged += new EventHandler(Call_StateChanged);
+            call.MediaAnswer += new EventHandler<EventArgs<SDP_Message>>(Call_MediaAnswer);
+            call.CallFailed += new EventHandler<SIP_ResponseReceivedEventArgs>(delegate(object s1,SIP_ResponseReceivedEventArgs e1){
+                this.BeginInvoke(
+                    new MethodInvoker(delegate(){
+                        MessageBox.Show(this,"Calling to '" + call.RemoteUri + "' failed !\nError: " + e1.Response.StatusCode_ReasonPhrase,"Call failure:",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                    }),
+                    null
+                );
+            });
+            call.RequestReceived += new EventHandler<SIP_RequestReceivedEventArgs>(Call_RequestReceived);
+            call.Error += new EventHandler<ExceptionEventArgs>(delegate(object s1,ExceptionEventArgs e1){
+                OnError(e1.Exception);
+            });
+            m_pCalls.Add(call);
+
+            // Add call to UI.
+            ListViewItem it = new ListViewItem(call.State.ToString());
+            it.SubItems.Add(call.LocalUri.ToString());
+            it.SubItems.Add(call.RemoteUri.ToString());
+            it.Tag = call;
+            m_pCallTab_Calls_Calls.Items.Add(it);
+                        
+            // Start calling.
+            call.Start();
+        }
+                                                                
+        #endregion
+
+        #region method OpenIM
+
+        /// <summary>
+        /// Opens new IM window to the specified recipient.
+        /// </summary>
+        /// <param name="account">Local account.</param>
+        /// <param name="to">Remote party.</param>
+        /// <returns>Returns created IM window.</returns>
+        /// <exception cref="ArgumentNullException">Is raised when <b>account</b> or <b>to</b> is null reference.</exception>
+        public wfrm_IM OpenIM(Account account,SIP_t_NameAddress to)
+        {
+            if(account == null){
+                throw new ArgumentNullException("account");
+            }
+            if(to == null){
+                throw new ArgumentNullException("to");
+            }
+
+            wfrm_IM frmIM = new wfrm_IM(this,account,to);
+            m_pActiveIM.Add(frmIM);
+            frmIM.FormClosed += new FormClosedEventHandler(IM_FormClosed);
+            frmIM.Visible = true;
+
+            return frmIM;
+        }
+
+        #endregion
+
+
+        #region method LoadSettings
+
+        /// <summary>
+        /// Loads settings from xml file.
+        /// </summary>
+        private void LoadSettings()
+        {
+            if(File.Exists(Application.StartupPath + "\\Settings\\Settings.xml")){
+                this.Settings.Load(Application.StartupPath + "\\Settings\\Settings.xml");
+            }
+
+            m_pStack.BindInfo = Settings.Bindings;
+            m_pStack.RequestReceived += new EventHandler<SIP_RequestReceivedEventArgs>(m_pUA_RequestReceived);
+            m_pStack.Credentials.AddRange(this.Settings.Credentials.ToArray());
+            m_pStack.Start();
+            foreach(Account account in this.Settings.Accounts){
+                if(account.Register){
+                    SIP_Uri registrarServer = SIP_Uri.Parse(account.RegistrarServer);
+                                        
+                    SIP_UA_Registration registration = m_pStack.CreateRegistration(
+                        registrarServer,
+                        account.AOR,
+                        AbsoluteUri.Parse(registrarServer.Scheme + ":" + account.AOR.Split('@')[0] + "@auto-allocate"),
+                        account.RegisterInterval
+                    );
+                    registration.StateChanged += new EventHandler(Registration_StateChanged);
+                    registration.BeginRegister(true);
+
+                    // TODO: If TLS supported, add TLS registration too.
+                }
+
+                m_pAccounts.Items.Add(new WComboBoxItem(account.AOR,account));
+            }            
+
+            if(m_pAccounts.Items.Count > 0){
+                m_pAccounts.SelectedIndex = 0;
+            }
+
+            // REMOVE ME:            
+            
+        }
+
+        #endregion
+
+        #region method Restart
+
+        /// <summary>
+        /// Starts/restarts SIP UA.
+        /// </summary>
+        private void Restart()
+        {
+            // TODO:
+        }
+
+        #endregion
+
+        #region method AcceptCall
+
+        /// <summary>
+        /// Accepts the specified call.
+        /// </summary>
+        /// <param name="call">Call to accpet.</param>
+        private void AcceptCall(Call call)
+        {
+            if(call == null){
+                throw new ArgumentNullException("call");
+            }
+
+            /* RFC 3261 13.3.1 Processing of the INVITE.
+                The INVITE may contain a session description, in which case the UAS
+                is being presented with an offer for that session.  It is possible
+                that the user is already a participant in that session, even though
+                the INVITE is outside of a dialog.  This can happen when a user is
+                invited to the same multicast conference by multiple other
+                participants.  If desired, the UAS MAY use identifiers within the
+                session description to detect this duplication.  For example, SDP
+                contains a session id and version number in the origin (o) field.  If
+                the user is already a member of the session, and the session
+                parameters contained in the session description have not changed, the
+                UAS MAY silently accept the INVITE (that is, send a 2xx response
+                without prompting the user).
+
+                If the INVITE does not contain a session description, the UAS is
+                being asked to participate in a session, and the UAC has asked that
+                the UAS provide the offer of the session.  It MUST provide the offer
+                in its first non-failure reliable message back to the UAC.  In this
+                specification, that is a 2xx response to the INVITE.
+            */
+
+            try{
+                Account account = (Account)call.Tags["Account"];
+
+                SDP_Message sdpOffer = null;
+                if(call.Tags.ContainsKey("SDP_Offer")){
+                    sdpOffer = (SDP_Message)call.Tags["SDP_Offer"];
+                    call.Tags.Remove("SDP_Offer");
+                }
+
+                // Remote party sent offerless INVITE, we need to send offer to it.
+                if(sdpOffer == null){
+                    MediaSession mediaSession = new MediaSession();            
+                    mediaSession.LocalSdpVersion = 1;
+                    mediaSession.LocalHost = GetLocalIP().ToString();
+                    mediaSession.RTP = new RTP_MultimediaSession(RTP_Utils.GenerateCNAME());
+                    call.Tags.Add("MediaSession",mediaSession);
+            
+                    // Add 1 audio stream.
+                    RTP_Session rtpSession = mediaSession.RTP.CreateSession(GetLocalRtpEP(),new RTP_Clock(new Random().Next(),8000));
+                    rtpSession.Payloads.Add(0,new PCMU());
+                    rtpSession.Payloads.Add(8,new PCMA());
+                    //Create audio receiver.
+                    call.Tags.Add("AudioReceiver",new RTP_AudioPlayer(AudioOut.Devices[0],rtpSession));
+                    // Create mic sender.
+                    RTP_AudioSender audioSender = new RTP_AudioSender(rtpSession.CreateSendStream());
+                    audioSender.Source = new AudioIn(AudioIn.Devices[0],8000,16,1);
+                    call.Tags.Add("AudioSender",audioSender);
+                    call.Tags.Add("AudioIn",audioSender.Source);
+
+                    MediaStream audioStream = new MediaStream(true,SDP_MediaTypes.audio,"RTP/AVP");
+                    audioStream.MediaFormats.AddRange(new string[]{"0","8"});
+                    audioStream.RtpSession  = rtpSession;
+                    audioStream.PublicRtpEP = GetRtpPublicEP(account,audioStream.RtpSession.LocalEP);
+                    mediaSession.MediaStreams.Add(audioStream);
+                        
+                    sdpOffer = CreateSDP(mediaSession,false);
+
+                    call.Accept(sdpOffer);
+                }
+                // Accept call and start media session.
+                else{
+                    MediaSession mediaSession = new MediaSession();            
+                    mediaSession.LocalSdpVersion = 1;
+                    mediaSession.LocalHost = GetLocalIP().ToString();
+                    //mediaSession.RTP = new RTP_MultimediaSession(RTP_Utils.GenerateCNAME());
+                    call.Tags.Add("MediaSession",mediaSession);
+
+                    ProcessSdpOffer(call,sdpOffer);
+
+                    // ProcessSdpOffer updated media session.
+                    mediaSession = (MediaSession)call.Tags["MediaSession"];
+
+                    call.Accept(CreateSDP(mediaSession,false));
+                }                
+            }
+            catch(Exception x){
+                call.Reject(SIP_ResponseCodes.x500_Server_Internal_Error + ": " + x.Message);
+            }
+        }
+
+        #endregion
+
+        #region method ToggleCallOnHold
+
+        /// <summary>
+        /// Toggles call on hold state.
+        /// </summary>
+        /// <param name="call">SIP call.</param>
+        /// <exception cref="ArgumentNullException">Is raised when <b>call</b> is null reference.</exception>
+        private void ToggleCallOnHold(Call call)
+        {
+            if(call == null){
+                throw new ArgumentNullException("call");
+            }
+
+            try{
+                bool putOnHold = true;
+                if(call.Tags.ContainsKey("OnHold")){
+                    putOnHold = !((bool)call.Tags["OnHold"]);
+                }
+
+                MediaSession mediaSession = (MediaSession)call.Tags["MediaSession"];
+                // Because we try to modify session, we need to increase SDP version.
+                mediaSession.LocalSdpVersion++;
+                                
+                // Generate new SDP offer.
+                SDP_Message sdpOffer = CreateSDP(mediaSession,putOnHold);
+                
+                SIP_Request reinvite = call.Dialog.CreateRequest(SIP_Methods.INVITE);
+                reinvite.ContentType = "application/sdp";
+                reinvite.Data        = sdpOffer.ToByte();
+
+                AutoResetEvent wait = new AutoResetEvent(false);
+                SIP_ResponseReceivedEventArgs response = null;
+                SIP_RequestSender requestSender = call.Dialog.CreateRequestSender(reinvite);
+                requestSender.ResponseReceived += new EventHandler<SIP_ResponseReceivedEventArgs>(delegate(object s,SIP_ResponseReceivedEventArgs e){
+                    response = e;
+                });
+                requestSender.Completed += new EventHandler(delegate(object s,EventArgs e){
+                    wait.Set();
+                });
+                requestSender.Start();
+                wait.WaitOne();
+                
+                // This never should happen.
+                if(response == null){
+                    MessageBox.Show(this,"Internal error.","Error:",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                }
+                // Remote party accepted offer.
+                if(response.Response.StatusCodeType == SIP_StatusCodeType.Success){
+                    // Store OnHold state flag.
+                    call.Tags["OnHold"] = putOnHold;
+
+                    SDP_Message sdpAnswer = SDP_Message.Parse(Encoding.UTF8.GetString(response.Response.Data));
+
+                    // Process SDP answer.
+                    ProcessSdpAnswer(call,sdpAnswer);
+
+                    RTP_AudioSender audioSender = (RTP_AudioSender)call.Tags["AudioSender"];
+                    if(putOnHold){
+                        // Send on hold music to remote party.
+                        audioSender.Source = ResManager.GetStream("onhold.pcm16");                        
+                    }
+                    // Switch back to microphone.
+                    else{
+                        audioSender.Source = (Stream)call.Tags["AudioIn"];
+                    }
+                }
+                // Remote party rejected offer.                
+                else{
+                    MessageBox.Show(this,"Put on hold rejected by remote party: " + response.Response.StatusCode_ReasonPhrase,"Error:",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                }
+            }
+            catch(Exception x){
+                MessageBox.Show(this,"Error: " + x.ToString(),"Error:",MessageBoxButtons.OK,MessageBoxIcon.Error);
+            }
+        }
+
+        #endregion
+
+        #region method ProcessSdpOffer
+
+        /// <summary>
+        /// Processes remote party SDP offer and updates media session based on it.
+        /// </summary>
+        /// <param name="sdpOffer">SDP offer.</param>
+        /// <exception cref="ArgumentNullException">Is raised when <b>call</b> or <b>sdpOffer</b> is null reference.</exception>
+        private void ProcessSdpOffer(Call call,SDP_Message sdpOffer)
+        {
+            if(call == null){
+                throw new ArgumentNullException("call");
+            }
+            if(sdpOffer == null){
+                throw new ArgumentNullException("sdpOffer");
+            }
+                        
+            Account      account             = (Account)call.Tags["Account"];
+            MediaSession currentMediaSession = (MediaSession)call.Tags["MediaSession"];
+            bool         isOnhold            = false;
+            
+            MediaSession newMediaSession = new MediaSession();
+            newMediaSession.LocalHost = currentMediaSession.LocalHost;
+            newMediaSession.RTP = new RTP_MultimediaSession(RTP_Utils.GenerateCNAME());
+            newMediaSession.LocalSdpVersion = currentMediaSession.LocalSdpVersion + 1;
+            newMediaSession.RemoteSdpVersion = currentMediaSession.RemoteSdpVersion;
+
+            bool acceptedAudio = false;
+            // Process offer media descriptions.
+            foreach(SDP_MediaDescription media in sdpOffer.MediaDescriptions){
+                // We already accepted 1 audio, reject this media.
+                if(acceptedAudio){
+                    MediaStream mediaStream = new MediaStream(false,media.MediaType,media.Protocol);
+                    mediaStream.MediaFormats.AddRange(media.MediaFormats.ToArray());
+                    newMediaSession.MediaStreams.Add(mediaStream);
+                }
+                // See if we can accept this audio stream.
+                if(media.MediaType == SDP_MediaTypes.audio && string.Equals(media.Protocol,"RTP/AVP",StringComparison.InvariantCultureIgnoreCase)){          
+                    // See what payloads we can support.
+                    List<string> payloads = new List<string>();
+                    foreach(string payload in media.MediaFormats){
+                        if(payload == "0"){
+                            payloads.Add("0");
+                        }
+                        else if(payload == "8"){
+                            payloads.Add("8");
+                        }
+                    }
+
+                    // None of the payloads supported, reject this media.
+                    if(payloads.Count == 0){
+                        MediaStream mediaStream = new MediaStream(false,media.MediaType,media.Protocol);
+                        mediaStream.MediaFormats.AddRange(media.MediaFormats.ToArray());
+                        newMediaSession.MediaStreams.Add(mediaStream);
+                    }
+                    // Accept this stream.
+                    else{
+                        // Create RTP session.
+                        RTP_Session rtpSession = newMediaSession.RTP.CreateSession(GetLocalRtpEP(),new RTP_Clock(new Random().Next(),8000));
+                        rtpSession.Payload = Convert.ToInt32(payloads[0]);
+                        if(payloads.Contains("0")){
+                            rtpSession.Payloads.Add(0,new PCMU());
+                        }
+                        if(payloads.Contains("8")){
+                            rtpSession.Payloads.Add(8,new PCMA());
+                        }
+                        //Create audio receiver.
+                        call.Tags["AudioReceiver"] = new RTP_AudioPlayer(AudioOut.Devices[0],rtpSession);
+                        // Create mic sender.
+                        RTP_AudioSender audioSender = new RTP_AudioSender(rtpSession.CreateSendStream());
+                        audioSender.Source = new AudioIn(AudioIn.Devices[0],8000,16,1);
+                        call.Tags["AudioSender"] = audioSender;
+                        call.Tags["AudioIn"] = audioSender.Source;
+
+                        // If media has "address" specified, use it, otherwise use global "address".
+                        string host = media.Connection != null ? media.Connection.Address : sdpOffer.Connection.Address;           
+                        if(host != null){                
+                            int remoteRtcpPort = media.Port + 1;
+                            // Use specified RTCP port, if specified.
+                            foreach(SDP_Attribute attribute in media.Attributes){
+                                if(string.Equals(attribute.Name,"rtcp",StringComparison.InvariantCultureIgnoreCase)){
+                                    remoteRtcpPort = Convert.ToInt32(attribute.Value);
+                                    break;
+                                }
+                            }
+                                                                    
+                            // Add new target.
+                            rtpSession.AddTarget(new RTP_Address(System.Net.Dns.GetHostAddresses(host)[0],media.Port,remoteRtcpPort));
+                        }
+                              
+                        RTP_StreamMode streamMode = GetRtpStreamMode(sdpOffer,media);
+                        // Also honour local call-onhold mode.
+                        if(isOnhold){
+                            // Offer is sendrecv, we can send only.
+                            if(streamMode == RTP_StreamMode.SendReceive){
+                                streamMode = RTP_StreamMode.Send;
+                            }
+                            // Offer not sendrecv, we must be inactive then.
+                            else{
+                                streamMode = RTP_StreamMode.Inactive;
+                            }
+                        }
+
+                        // Set stream mode.
+                        rtpSession.StreamMode = streamMode;
+                                                                
+                        rtpSession.Start();
+
+                        MediaStream mediaStream = new MediaStream(true,media.MediaType,media.Protocol);
+                        mediaStream.MediaFormats.AddRange(payloads.ToArray());
+                        mediaStream.RtpSession  = rtpSession;
+                        mediaStream.PublicRtpEP = GetRtpPublicEP(account,rtpSession.LocalEP);
+                        newMediaSession.MediaStreams.Add(mediaStream);
+
+                        acceptedAudio = true;
+                    }
+                }
+                // Media type what we are not interested in, reject it.
+                else{
+                    MediaStream mediaStream = new MediaStream(false,media.MediaType,media.Protocol);
+                    mediaStream.MediaFormats.AddRange(media.MediaFormats.ToArray());
+                    newMediaSession.MediaStreams.Add(mediaStream);
+                }
+            }
+
+            // We accpeted 1 media stream.
+            if(acceptedAudio){
+                // Clean up old media session.
+                if(currentMediaSession.RTP != null){
+                    currentMediaSession.RTP.Dispose();
+                }
+
+                call.Tags["MediaSession"] = newMediaSession;
+            }
+        }
+
+        #endregion
+
+        #region method ProcessSdpAnswer
+
+        /// <summary>
+        /// Processes SDP answer and updates media session based on it.
+        /// </summary>
+        /// <param name="call">Call.</param>
+        /// <param name="sdpAnswer">SDP answer.</param>
+        /// <exception cref="ArgumentNullException">Is raised when <b>call</b> or <b>sdpAnswer</b> is null reference.</exception>
+        private void ProcessSdpAnswer(Call call,SDP_Message sdpAnswer)
+        {
+            if(call == null){
+                throw new ArgumentNullException("call");
+            }
+            if(sdpAnswer == null){
+                throw new ArgumentNullException("sdpAnswer");
+            }
+
+            try{
+                MediaSession mediaSession = (MediaSession)call.Tags["MediaSession"];
+
+                // Remote party din't change session, this is answer to our session refresh request.
+                if(mediaSession.RemoteSdpVersion == sdpAnswer.Origin.SessionVersion){
+                    return;
+                }
+                
+                // Media descriptions count in answer must be equal to media offer(RFC 3261 6.).
+                if(mediaSession.MediaStreams.Count != sdpAnswer.MediaDescriptions.Count){
+                    call.Terminate("Invalid SDP answer, media descriptions count in answer must be equal to media offer(RFC 3261 6.).");
+
+                    return;
+                }
+
+                // Udpate media session based on SDP answer.
+                for(int i=0;i<mediaSession.MediaStreams.Count;i++){
+                    MediaStream          offerMedia  = mediaSession.MediaStreams[i];
+                    SDP_MediaDescription answerMedia = sdpAnswer.MediaDescriptions[i];
+
+                    // This stream rejected by remote party.
+                    if(answerMedia.Port == 0){                        
+                        offerMedia.IsUsed = false;
+
+                        // Release RTP session.
+                        if(offerMedia.RtpSession != null){
+                            offerMedia.RtpSession.Dispose();
+                            offerMedia.RtpSession = null;
+                            offerMedia.PublicRtpEP = null;
+                        }
+                    }
+                    else{
+                        offerMedia.IsUsed = true;
+                        offerMedia.MediaFormats.Clear();
+                        offerMedia.RtpSession.Payloads.Clear();
+
+                        // Add only payloads what we can support from answer.
+                        foreach(string payload in answerMedia.MediaFormats){
+                            if(payload == "0"){
+                                offerMedia.MediaFormats.Add("0");
+                                offerMedia.RtpSession.Payloads.Add(0,new PCMU());
+                            }
+                            else if(payload == "8"){
+                                offerMedia.MediaFormats.Add("8");
+                                offerMedia.RtpSession.Payloads.Add(8,new PCMA());
+                            }
+                        }
+
+                        // If media has "address" specified, use it, otherwise use global "address".
+                        string host = answerMedia.Connection != null ? answerMedia.Connection.Address : sdpAnswer.Connection.Address;           
+                        if(host != null){                
+                            int remoteRtcpPort = answerMedia.Port + 1;
+                            // Use specified RTCP port, if specified.
+                            foreach(SDP_Attribute attribute in answerMedia.Attributes){
+                                if(string.Equals(attribute.Name,"rtcp",StringComparison.InvariantCultureIgnoreCase)){
+                                    remoteRtcpPort = Convert.ToInt32(attribute.Value);
+                                    break;
+                                }
+                            }
+                          
+                            // Remove existing target, if it exists.
+                            if(offerMedia.RtpSession.Targets.Length > 0){
+                                offerMedia.RtpSession.RemoveTarget(offerMedia.RtpSession.Targets[0]);
+                            }
+                    
+                            // Add new target.
+                            offerMedia.RtpSession.AddTarget(new RTP_Address(System.Net.Dns.GetHostAddresses(host)[0],answerMedia.Port,remoteRtcpPort));
+                        }
+
+                        // TODO: Handle sendonly,receiveonly,sendreceive.
+                        RTP_StreamMode remotePartyStreamMode = GetRtpStreamMode(sdpAnswer,answerMedia);
+                        //if(offerMedia.RtpSession.
+                        //if(remotePartyStreamMode == RTP_StreamMode.){
+                        //}
+                        offerMedia.RtpSession.StreamMode = remotePartyStreamMode;
+                                                           
+                        offerMedia.RtpSession.Payload = Convert.ToInt32(answerMedia.MediaFormats[0]);
+                        offerMedia.RtpSession.Start();                                                
+                    }
+                }
+
+                mediaSession.RemoteSdpVersion = sdpAnswer.Origin.SessionVersion;
+            }
+            catch(Exception x){
+                call.Terminate("Internal error: " + x.Message);
+            }
+        }
+
+        #endregion
+
+        #region method CreateSDP
+
+        /// <summary>
+        /// Creates local SDP based on the specified media session.
+        /// </summary>
+        /// <param name="mediaSession">Media session.</param>
+        /// <returns>Returns created SDP.</returns>
+        /// <exception cref="ArgumentNullException">Is raised when <b>mediaSession</b> is null reference.</exception>
+        private SDP_Message CreateSDP(MediaSession mediaSession,bool onHold)
+        {
+            if(mediaSession == null){
+                throw new ArgumentNullException("mediaSession");
+            }
+                        
+            SDP_Message sdpOffer = new SDP_Message();
+            sdpOffer.Version = "0";
+            sdpOffer.Origin = new SDP_Origin("-",sdpOffer.GetHashCode(),mediaSession.LocalSdpVersion,"IN","IP4",mediaSession.LocalHost);
+            sdpOffer.SessionName = "SIP Call";
+            sdpOffer.Times.Add(new SDP_Time(0,0));
+
+            // Add media streams.
+            foreach(MediaStream m in mediaSession.MediaStreams){
+                if(!m.IsUsed){
+                    SDP_MediaDescription media = new SDP_MediaDescription(m.MediaType,0,0,m.Protocol,m.MediaFormats.ToArray());                    
+                    sdpOffer.MediaDescriptions.Add(media);
+                }
+                else{
+                    SDP_MediaDescription media = new SDP_MediaDescription(SDP_MediaTypes.audio,m.PublicRtpEP.DataPort,1,"RTP/AVP",m.MediaFormats.ToArray());
+                    media.Connection = new SDP_Connection("IN","IP4",m.PublicRtpEP.IP.ToString());
+                    // RTCP port is different than RTP + 1, we need explicitly set it.
+                    if(m.PublicRtpEP.ControlPort != (m.PublicRtpEP.DataPort + 1)){
+                        media.Attributes.Add(new SDP_Attribute("rtcp",m.PublicRtpEP.ControlPort.ToString()));
+                    }
+                    media.Attributes.Add(new SDP_Attribute("rtpmap","0 PCMU/8000"));
+                    media.Attributes.Add(new SDP_Attribute("rtpmap","8 PCMA/8000"));
+                    media.Attributes.Add(new SDP_Attribute("ptime","20"));
+                    if(m.RtpSession != null){
+                        if(onHold){
+                            media.Attributes.Add(new SDP_Attribute("sendonly",""));
+                        }
+                        else{
+                            media.Attributes.Add(new SDP_Attribute("sendrecv",""));
+                        }
+                    }                    
+                    sdpOffer.MediaDescriptions.Add(media);
+                }
+            }
+
+            return sdpOffer;
+        }
+
+        #endregion
+
+        #region method GetRtpStreamMode
+
+        /// <summary>
+        /// Gets RTP stream mode for the specified media.
+        /// </summary>
+        /// <param name="sdp">SDP message.</param>
+        /// <param name="media">Media stream.</param>
+        /// <returns>Returns RTP stream mode.</returns>
+        private RTP_StreamMode GetRtpStreamMode(SDP_Message sdp,SDP_MediaDescription media)
+        {
+            if(sdp == null){
+                throw new ArgumentNullException("sdp");
+            }
+            if(media == null){
+                throw new ArgumentNullException("media");
+            }
+
+            // Search sendrecv,sendonly,recvonly,inactive media level attribute.
+            foreach(SDP_Attribute a in media.Attributes){
+                if(string.Equals(a.Name,"sendrecv",StringComparison.InvariantCultureIgnoreCase)){
+                    return RTP_StreamMode.SendReceive;
+                }
+                else if(string.Equals(a.Name,"sendonly",StringComparison.InvariantCultureIgnoreCase)){
+                    return RTP_StreamMode.Receive;
+                }
+                else if(string.Equals(a.Name,"recvonly",StringComparison.InvariantCultureIgnoreCase)){
+                    return RTP_StreamMode.Send;
+                }
+                else if(string.Equals(a.Name,"inactive",StringComparison.InvariantCultureIgnoreCase)){
+                    return RTP_StreamMode.Inactive;
+                }
+            }
+
+            // If we reach so far then default(sendrecv) or this attribute is at session level.
+            foreach(SDP_Attribute a in sdp.Attributes){
+                if(string.Equals(a.Name,"sendrecv",StringComparison.InvariantCultureIgnoreCase)){
+                    return RTP_StreamMode.SendReceive;
+                }
+                else if(string.Equals(a.Name,"sendonly",StringComparison.InvariantCultureIgnoreCase)){
+                    return RTP_StreamMode.Receive;
+                }
+                else if(string.Equals(a.Name,"recvonly",StringComparison.InvariantCultureIgnoreCase)){
+                    return RTP_StreamMode.Send;
+                }
+                else if(string.Equals(a.Name,"inactive",StringComparison.InvariantCultureIgnoreCase)){
+                    return RTP_StreamMode.Inactive;
+                }
+            }
+
+            // We have default(sendrecv).
+
+            return RTP_StreamMode.SendReceive;
+        }
+
+        #endregion
+
+        #region method GetLocalRtpEP
+
+        /// <summary>
+        /// Gets single RTP session RTP,RTCP end point.
+        /// </summary>
+        /// <returns>Returns single RTP session RTP,RTCP end point.</returns>
+        private RTP_Address GetLocalRtpEP()
+        {
+            IPAddress localIP = null;
+            foreach(IPAddress ip in System.Net.Dns.GetHostAddresses("")){
+                if(ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !ip.Equals(IPAddress.Loopback)){
+                    localIP = ip;
+                    break;
+                }
+            }
+
+            // FIX ME:
+            m_RtpBasePort += 2;
+                        
+            // TODO: Search first free port
+
+            return new RTP_Address(localIP,m_RtpBasePort,m_RtpBasePort + 1);
+        }
+
+        #endregion
+
+        #region method GetRtpPublicEP
+
+        /// <summary>
+        /// Resolves local RTP end point to publicend point.
+        /// </summary>
+        /// <param name="account">Local account.</param>
+        /// <param name="localEP">Local RTP end point.</param>
+        /// <returns>Returns public RTP end point.</returns>
+        /// <exception cref="ArgumentNullException">Is raised when <b>account</b> or <b>localEP</b> is null reference.</exception>
+        private RTP_Address GetRtpPublicEP(Account account,RTP_Address localEP)
+        {
+            if(account == null){
+                throw new ArgumentNullException("account");
+            }
+            if(localEP == null){
+                throw new ArgumentNullException("localEP");
+            }
+
+            /* NAT resolving.
+                1) UPnP open NAT.
+                2) STUN.
+            */
+            
+            // Get RTP and RTCP public IP:port.
+            try{
+                if(!string.IsNullOrEmpty(account.StunServer)){
+                    IPEndPoint publicRtpEP  = null;
+                    IPEndPoint publicRtcpEP = null;
+
+                    STUN_Result result = STUN_Client.Query(account.StunServer,3478,new IPEndPoint(localEP.IP,localEP.DataPort));
+                    if(result.PublicEndPoint != null){
+                        publicRtpEP = result.PublicEndPoint;
+                    }
+                    result = STUN_Client.Query(account.StunServer,3478,new IPEndPoint(localEP.IP,localEP.ControlPort));
+                    if(result.PublicEndPoint != null){
+                        publicRtcpEP = result.PublicEndPoint;
+                    }
+
+                    if(publicRtpEP != null && publicRtcpEP != null){
+                        return new RTP_Address(publicRtpEP.Address,publicRtpEP.Port,publicRtcpEP.Port);
+                    }
+                }
+            }
+            catch{                
+            }
+
+            return localEP;
+        }
+
+        #endregion
+
+        #region method GetLocalIP
+
+        /// <summary>
+        /// Gets local IPv4 address.
+        /// </summary>
+        /// <returns>Returns Ip address.</returns>
+        /// <exception cref="Exception">Is raised when no suitable IP address found.</exception>
+        private IPAddress GetLocalIP()
+        {
+            foreach(IPAddress ip in System.Net.Dns.GetHostAddresses("")){
+                if(ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !ip.Equals(IPAddress.Loopback)){
+                    return ip;
+                }
+            }
+
+            throw new Exception("No suitable IPv4 address available.");
+        }
+
+        #endregion
+
+        #region method OnError
+
+        /// <summary>
+        /// This methodis called when unhandled exception occured.
+        /// </summary>
+        /// <param name="x">Exception.</param>
+        private void OnError(Exception x)
+        {
+            // TODO: FIX ME:
+
+            Console.WriteLine("Error:" + x.ToString());
+        }
+
+        #endregion
+
+
+        #region Properties implementation
+
+        /// <summary>
+        /// Gets UA settings.
+        /// </summary>
+        public Settings Settings
+        {
+            get{ return m_pSettings; }
+        }
+
+        /// <summary>
+        /// Gets SIP UA.
+        /// </summary>
+        public SIP_Stack SIP_Stack
+        {
+            get{ return m_pStack; }
+        }
+
+        #endregion
+
+    }
+}

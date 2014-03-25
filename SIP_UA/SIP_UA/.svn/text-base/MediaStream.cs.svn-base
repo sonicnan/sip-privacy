@@ -1,0 +1,107 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Net;
+
+using LumiSoft.Net.RTP;
+
+namespace LumiSoft.SIP.UA
+{
+    /// <summary>
+    /// This class represents media session stream.
+    /// </summary>
+    public class MediaStream
+    {
+        private bool         m_IsUsed        = true;
+        private string       m_MediaType     = "";
+        private string       m_Protocol      = "";
+        private List<string> m_pMediaFormats = null;
+        private RTP_Session  m_pRtpSession   = null;
+        private RTP_Address  m_pPublicRtpEP  = null;
+
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        /// <param name="isUsed">Specified if media stream is used or not used.</param>
+        /// <param name="mediaType">SDP media type.</param>
+        /// <param name="protocol">SDP protocol.</param>
+        /// <exception cref="ArgumentNullException">Is raised when <b>mediaType</b> or <b>protocol</b> is null reference.</exception>
+        public MediaStream(bool isUsed,string mediaType,string protocol)
+        {
+            if(mediaType == null){
+                throw new ArgumentNullException("mediaType");
+            }
+            if(protocol == null){
+                throw new ArgumentNullException("protocol");
+            }
+
+            m_IsUsed    = isUsed;
+            m_MediaType = mediaType;
+            m_Protocol  = protocol;
+
+            m_pMediaFormats = new List<string>();
+        }
+
+
+        #region Properties implementation
+
+        /// <summary>
+        /// Gets or sets if specified media is used.
+        /// </summary>
+        public bool IsUsed
+        {
+            get{ return m_IsUsed; }
+
+            set{ m_IsUsed = value; }
+        }
+
+        /// <summary>
+        /// Gets SDP media type. For example: audio.
+        /// </summary>
+        public string MediaType
+        {
+            get{ return m_MediaType; }
+        }
+
+        /// <summary>
+        /// Gets SDP protocol. For example: RTP/AVP.
+        /// </summary>
+        public string Protocol
+        {
+            get{ return m_Protocol; }
+        }
+
+        /// <summary>
+        /// Gets SDP media formats collection.
+        /// </summary>
+        /// <remarks>In case of <b>RTP/AVP</b> this is list of RTP payloads in prefered order.</remarks>
+        public List<string> MediaFormats
+        {
+            get{ return m_pMediaFormats; }
+        }
+
+        /// <summary>
+        /// Gets or sets RTP session.
+        /// </summary>
+        public RTP_Session RtpSession
+        {
+            get{ return m_pRtpSession; }
+
+            set{ m_pRtpSession = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets public RTP end point.
+        /// </summary>
+        public RTP_Address PublicRtpEP
+        {
+            get{ return m_pPublicRtpEP; }
+
+            set{ m_pPublicRtpEP = value; }
+        }
+
+        #endregion
+
+    }
+}

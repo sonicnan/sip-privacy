@@ -1,0 +1,56 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+using LumiSoft.Net.SDP;
+
+namespace LumiSoft.SIP.UA
+{
+    /// <summary>
+    /// This class provides data for the <b>Call.MediaOffer</b> event.
+    /// </summary>
+    public class MediaOffer_EventArgs : EventArgs
+    {
+        private SDP_Message m_pOffer  = null;
+        private SDP_Message m_pAnswer = null;
+
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        /// <param name="sdp">SDP offer.</param>
+        /// <exception cref="ArgumentNullException">Is raised when <b>sdp</b> is null reference.</exception>
+        public MediaOffer_EventArgs(SDP_Message sdp)
+        {
+            if(sdp == null){
+                throw new ArgumentNullException("sdp");
+            }
+
+            m_pOffer = sdp;
+        }
+
+
+        #region Properties implementation
+
+        /// <summary>
+        /// Gets media offer.
+        /// </summary>
+        public SDP_Message Offer
+        {
+            get{ return m_pOffer; }
+        }
+
+        /// <summary>
+        /// Gets or sets media answer.
+        /// </summary>
+        public SDP_Message Answer
+        {
+            get{ return m_pAnswer; }
+
+            set{ m_pAnswer = value; }
+        }
+
+        #endregion
+
+    }
+}

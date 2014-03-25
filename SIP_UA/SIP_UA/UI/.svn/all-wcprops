@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/lumisoft_SIP_UA/!svn/ver/14/trunk/SIP_UA/UI
+END
+WComboBoxItem.cs
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/UI/WComboBoxItem.cs
+END
+wfrm_Main.cs
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/lumisoft_SIP_UA/!svn/ver/14/trunk/SIP_UA/UI/wfrm_Main.cs
+END
+wfrm_IM.cs
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/UI/wfrm_IM.cs
+END
+ToolBarRendererEx.cs
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/UI/ToolBarRendererEx.cs
+END
+wfrm_Settings_Account.cs
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/UI/wfrm_Settings_Account.cs
+END
+HtmlRichTextBox.cs
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/UI/HtmlRichTextBox.cs
+END
+wfrm_Settings_Accounts.cs
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/UI/wfrm_Settings_Accounts.cs
+END

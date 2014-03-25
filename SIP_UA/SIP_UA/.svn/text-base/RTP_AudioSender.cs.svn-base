@@ -1,0 +1,129 @@
+﻿using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+
+using LumiSoft.Net.RTP;
+using LumiSoft.Net.Media;
+using LumiSoft.Net.Media.Codec;
+using LumiSoft.Net.Media.Codec.Audio;
+
+namespace LumiSoft.SIP.UA
+{
+    /// <summary>
+    /// This class implements RTP audio sender.
+    /// </summary>
+    public class RTP_AudioSender
+    {
+        private bool           m_IsDisposed = false;
+        private Stream         m_pSource    = null;
+        private RTP_SendStream m_pRtpStream = null;
+        private RTP_Packet     m_pRtpPacket = null;
+
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        /// <param name="stream">RTP stream.</param>
+        /// <exception cref="ArgumentNullException">Is raised when <b>stream</b> is null reference.</exception>
+        public RTP_AudioSender(RTP_SendStream stream)
+        {
+            if(stream == null){
+                throw new ArgumentNullException("stream");
+            }
+
+            m_pRtpStream = stream;
+
+            m_pRtpPacket = new RTP_Packet();
+
+            Thread tr = new Thread(this.SendAudio);
+            tr.Start();
+        }
+
+        #region method Dispose
+
+        /// <summary>
+        /// Cleans up any resources being used.
+        /// </summary>
+        public void Dispose()
+        {
+            if(m_IsDisposed){
+                return;
+            }
+            m_IsDisposed = true;
+        }
+
+        #endregion
+
+
+        #region method SendAudio
+
+        /// <summary>
+        /// Sends audio in audio to RTP stream.
+        /// </summary>
+        private void SendAudio()
+        {            
+            int    ptime      = 20;
+            byte[] readBuffer = new byte[320];
+            while(!m_IsDisposed){
+                try{
+                    if(m_pSource != null){
+                        int readedCount = m_pSource.Read(readBuffer,0,readBuffer.Length);
+                        if(readedCount == 0){
+                            Thread.Sleep(1);
+
+                            continue;
+                        }
+                        
+                        m_pRtpPacket.Data = m_pRtpStream.Session.Payloads[m_pRtpStream.Session.Payload].Encode(readBuffer,0,readedCount);
+                        m_pRtpPacket.Timestamp = m_pRtpStream.Session.RtpClock.RtpTimestamp;
+                        m_pRtpStream.Send(m_pRtpPacket);
+
+                        Thread.Sleep(ptime);
+                    }
+                }
+                catch(ObjectDisposedException x){
+                    string dummy = x.Message;
+
+                    // RTP session disposed, dispose sender.
+                    Dispose();
+
+                    return;
+                }
+                catch{
+                }
+            }          
+        }
+
+        #endregion
+
+
+        #region Properties implementation
+
+        /// <summary>
+        /// Gets source stream. Audio must be 16khz,16-bit,1-channel.
+        /// </summary>
+        /// <exception cref="ObjectDisposedException">Is raised when this object is disposed and and this method is accessed.</exception>
+        public Stream Source
+        {
+            get{
+                if(m_IsDisposed){
+                    throw new ObjectDisposedException(this.GetType().Name);
+                }
+                
+                return m_pSource; 
+            }
+
+            set{
+                if(m_IsDisposed){
+                    throw new ObjectDisposedException(this.GetType().Name);
+                }
+
+                m_pSource = value;
+            }
+        }
+
+        #endregion
+    }
+}

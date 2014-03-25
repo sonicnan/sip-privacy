@@ -1,0 +1,119 @@
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/lumisoft_SIP_UA/!svn/ver/13/trunk/SIP_UA/Resources
+END
+call.ico
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/call.ico
+END
+register_ok.ico
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/register_ok.ico
+END
+call_hangup.ico
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/call_hangup.ico
+END
+ResManager.cs
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/Resources/ResManager.cs
+END
+bold.ico
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/bold.ico
+END
+app.ico
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/app.ico
+END
+ringing.wav
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/ringing.wav
+END
+dial_tone.wav
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/Resources/dial_tone.wav
+END
+underline.ico
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/underline.ico
+END
+fontbackcolor.ico
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/fontbackcolor.ico
+END
+register_registering.ico
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/register_registering.ico
+END
+calling.wav
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/lumisoft_SIP_UA/!svn/ver/13/trunk/SIP_UA/Resources/calling.wav
+END
+register_error.ico
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/register_error.ico
+END
+onhold.pcm16
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/lumisoft_SIP_UA/!svn/ver/12/trunk/SIP_UA/Resources/onhold.pcm16
+END
+blocked.ico
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/blocked.ico
+END
+italic.ico
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/italic.ico
+END
+im.ico
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/im.ico
+END
+fontcolor.ico
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/Resources/fontcolor.ico
+END
+busy.wav
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/Resources/busy.wav
+END

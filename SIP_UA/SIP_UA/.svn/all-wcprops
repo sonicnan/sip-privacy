@@ -1,0 +1,95 @@
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/lumisoft_SIP_UA/!svn/ver/14/trunk/SIP_UA
+END
+SIP_UA.csproj
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/lumisoft_SIP_UA/!svn/ver/12/trunk/SIP_UA/SIP_UA.csproj
+END
+RTP_AudioReceiver.cs
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/lumisoft_SIP_UA/!svn/ver/11/trunk/SIP_UA/RTP_AudioReceiver.cs
+END
+Call.cs
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/lumisoft_SIP_UA/!svn/ver/14/trunk/SIP_UA/Call.cs
+END
+CallState.cs
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/CallState.cs
+END
+MediaOffer_EventArgs.cs
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/lumisoft_SIP_UA/!svn/ver/7/trunk/SIP_UA/MediaOffer_EventArgs.cs
+END
+MediaSession.cs
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/lumisoft_SIP_UA/!svn/ver/8/trunk/SIP_UA/MediaSession.cs
+END
+RTP_AudioSender.cs
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/lumisoft_SIP_UA/!svn/ver/12/trunk/SIP_UA/RTP_AudioSender.cs
+END
+DataUtils.cs
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/DataUtils.cs
+END
+MediaStream.cs
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/lumisoft_SIP_UA/!svn/ver/14/trunk/SIP_UA/MediaStream.cs
+END
+Account.cs
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/Account.cs
+END
+license.txt
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/lumisoft_SIP_UA/!svn/ver/9/trunk/SIP_UA/license.txt
+END
+Settings.cs
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/Settings.cs
+END
+Win32.cs
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/Win32.cs
+END
+Program.cs
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/lumisoft_SIP_UA/!svn/ver/5/trunk/SIP_UA/Program.cs
+END
+SIP_UA.sln
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/lumisoft_SIP_UA/!svn/ver/4/trunk/SIP_UA/SIP_UA.sln
+END
