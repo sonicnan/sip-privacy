@@ -13,12 +13,13 @@ namespace LumiSoft.Net.SIP.UA
     /// <summary>
     /// This class implements SIP UA. Defined in RFC 3261 8.1.
     /// </summary>
-    [Obsolete("Use SIP stack instead.")]
+    //[Obsolete("Use SIP stack instead.")]
     public class SIP_UA : IDisposable
     {
         private bool              m_IsDisposed = false;
         private SIP_Stack         m_pStack     = null;
         private List<SIP_UA_Call> m_pCalls     = null;
+        private List<SIP_UA_Registration> m_pRegistrations = null;
         private object            m_pLock      = new object();
 
         /// <summary>
@@ -29,9 +30,29 @@ namespace LumiSoft.Net.SIP.UA
             m_pStack = new SIP_Stack();
             m_pStack.RequestReceived += new EventHandler<SIP_RequestReceivedEventArgs>(m_pStack_RequestReceived);
 
+            m_pRegistrations = new List<SIP_UA_Registration>();
             m_pCalls = new List<SIP_UA_Call>();
         }
-                        
+
+
+        /// <summary>
+        /// Default constructor with SIP_Stack.
+        /// </summary>
+        public SIP_UA(SIP_Stack stack)
+        {
+
+            if (stack == null)
+            {
+                throw new ArgumentNullException("stack");
+            }
+
+            m_pStack = stack;
+            m_pStack.RequestReceived += new EventHandler<SIP_RequestReceivedEventArgs>(m_pStack_RequestReceived);
+
+            m_pRegistrations = new List<SIP_UA_Registration>();
+            m_pCalls = new List<SIP_UA_Call>();
+        }
+             
         #region method Dispose
 
         /// <summary>
@@ -46,7 +67,13 @@ namespace LumiSoft.Net.SIP.UA
                                             
                 // Hang up all calls.
                 foreach(SIP_UA_Call call in m_pCalls.ToArray()){
-                    call.Terminate();
+                    call.Terminate("Hang up", true);
+                }
+
+                // Unregister registrations.
+                foreach (SIP_UA_Registration reg in m_pRegistrations.ToArray())
+                {
+                    reg.BeginUnregister(true);
                 }
 
                 // Wait till all registrations and calls disposed or wait timeout reached.
@@ -62,11 +89,13 @@ namespace LumiSoft.Net.SIP.UA
 
                 m_IsDisposed = true;
 
-                this.RequestReceived = null;
                 this.IncomingCall = null;
 
-                m_pStack.Dispose();
-                m_pStack = null;               
+                if (m_pStack != null)
+                {
+                    m_pStack.Dispose();
+                    m_pStack = null;
+                }               
             }
         }
 
@@ -74,6 +103,7 @@ namespace LumiSoft.Net.SIP.UA
 
 
         #region Events handling
+
 
         #region method m_pStack_RequestReceived
 
@@ -83,6 +113,16 @@ namespace LumiSoft.Net.SIP.UA
         /// <param name="sender">Sender.</param>
         /// <param name="e">Event data.</param>
         private void m_pStack_RequestReceived(object sender,SIP_RequestReceivedEventArgs e)
+        {
+            OnRequestReceived(e);
+        }
+
+
+        /// <summary>
+        /// This method is called when new request is received.
+        /// </summary>
+        /// <param name="e">Request event arguments.</param>
+        private void OnRequestReceived(SIP_RequestReceivedEventArgs e)
         {
             // TODO: Performance: rise events on thread pool or see if this method called on pool aready, then we may not keep lock for events ?
 
@@ -160,6 +200,62 @@ namespace LumiSoft.Net.SIP.UA
         #endregion
 
 
+        #region method CreateRegistration
+
+        /// <summary>
+        /// Creates new registration.
+        /// </summary>
+        /// <param name="server">Registrar server URI. For example: sip:domain.com.</param>
+        /// <param name="aor">Registration address of record. For example: user@domain.com.</param>
+        /// <param name="contact">Contact URI.</param>
+        /// <param name="expires">Gets after how many seconds reigisration expires.</param>
+        /// <returns>Returns created registration.</returns>
+        /// <exception cref="ObjectDisposedException">Is raised when this object is disposed and and this method is accessed.</exception>
+        /// <exception cref="ArgumentNullException">Is raised when <b>server</b>,<b>aor</b> or <b>contact</b> is null reference.</exception>
+        /// <exception cref="ArgumentException">Is raised when any of the arguments has invalid value.</exception>
+        public SIP_UA_Registration CreateRegistration(SIP_Uri server, string aor, AbsoluteUri contact, int expires)
+        {
+            if (m_pStack.State == SIP_StackState.Disposed)
+            {
+                throw new ObjectDisposedException(this.GetType().Name);
+            }
+            if (server == null)
+            {
+                throw new ArgumentNullException("server");
+            }
+            if (aor == null)
+            {
+                throw new ArgumentNullException("aor");
+            }
+            if (aor == string.Empty)
+            {
+                throw new ArgumentException("Argument 'aor' value must be specified.");
+            }
+            if (contact == null)
+            {
+                throw new ArgumentNullException("contact");
+            }
+
+            lock (m_pRegistrations)
+            {
+                SIP_UA_Registration registration = new SIP_UA_Registration(this.Stack, server, aor, contact, expires);
+                registration.Disposed += new EventHandler(delegate(object s, EventArgs e)
+                {
+                    if (m_pStack.State != SIP_StackState.Disposed)
+                    {
+                        m_pRegistrations.Remove(registration);
+                    }
+                });
+                m_pRegistrations.Add(registration);
+
+                return registration;
+            }
+        }
+
+        #endregion
+
+
+
         #region method CreateCall
 
         /// <summary>
@@ -229,30 +325,31 @@ namespace LumiSoft.Net.SIP.UA
                 return m_pCalls.ToArray();
             }
         }
-                
+
+
+        /// <summary>
+        /// Gets current registrations.
+        /// </summary>
+        /// <exception cref="ObjectDisposedException">Is raised when this object is disposed and and this property is accessed.</exception>
+        public SIP_UA_Registration[] Registrations
+        {
+            get
+            {
+                if (m_pStack.State == SIP_StackState.Disposed)
+                {
+                    throw new ObjectDisposedException(this.GetType().Name);
+                }
+
+                return m_pRegistrations.ToArray();
+            }
+        }
+
+
+
         #endregion
 
         #region Events implementation
 
-        /// <summary>
-        /// Is raised when user agent get new SIP request.
-        /// </summary>
-        public event EventHandler<SIP_RequestReceivedEventArgs> RequestReceived = null;
-
-        #region method OnRequestReceived
-
-        /// <summary>
-        /// Raises <b>RequestReceived</b> event.
-        /// </summary>
-        /// <param name="request">SIP request.</param>
-        protected void OnRequestReceived(SIP_RequestReceivedEventArgs request)
-        {
-            if(this.RequestReceived != null){
-                this.RequestReceived(this,request);
-            }
-        }
-
-        #endregion
 
         /// <summary>
         /// Is raised when new incoming call.

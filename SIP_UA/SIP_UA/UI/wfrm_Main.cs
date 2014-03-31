@@ -11,8 +11,8 @@ using System.Threading;
 using LumiSoft.Net;
 using LumiSoft.Net.SDP;
 using LumiSoft.Net.SIP;
-using LumiSoft.Net.SIP.Debug;
 using LumiSoft.Net.SIP.Stack;
+using LumiSoft.Net.SIP.Debug;
 using LumiSoft.Net.SIP.Message;
 using LumiSoft.Net.Media;
 using LumiSoft.Net.Media.Codec;
@@ -38,7 +38,6 @@ namespace LumiSoft.SIP.UA.UI
         private ToolStrip      m_pToolbar     = null;
         private ComboBox       m_pAccounts    = null;
         private Button         m_pCall        = null;
-        private Button         m_pIM          = null;
         private ComboBox       m_pCallUriType = null;
         private ComboBox       m_pCallUri     = null;
         private TabControl     m_pCallTab     = null;
@@ -50,6 +49,7 @@ namespace LumiSoft.SIP.UA.UI
         private bool                       m_IsDebug         = true;
         private Settings                   m_pSettings       = null;
 
+        private SIP_Stack m_pStack = null;
         private SIP_UA m_pUA = null;
         private List<wfrm_IM>              m_pActiveIM       = null;        
         private wfrm_SIP_Debug             m_pDebugFrom      = null;
@@ -68,8 +68,10 @@ namespace LumiSoft.SIP.UA.UI
         public wfrm_Main(bool isDebug)
         {
             InitUI();
-            m_pUA = new SIP_UA();
+            m_pStack = new SIP_Stack();
+            m_pUA = new SIP_UA(m_pStack);
             m_IsDebug = isDebug;
+
             m_pSettings = new Settings();
             m_pUA.Stack.UserAgent = "LumiSoft SIP UA 1.0";
             m_pUA.Stack.Error += new EventHandler<ExceptionEventArgs>(m_pStack_Error);
@@ -77,15 +79,13 @@ namespace LumiSoft.SIP.UA.UI
                         
             // Show SIP debug UI if in debug mode.
             if(m_IsDebug){
-                m_pDebugFrom = new wfrm_SIP_Debug(m_pUA.Stack);
+                m_pDebugFrom = new wfrm_SIP_Debug(m_pStack);
                 m_pDebugFrom.Show();
             }
 
             // Remove me:
-            m_pCallUri.Items.Add("test@lumisoft.ee");
-            m_pCallUri.Items.Add("tel@lumisoft.ee");
-            m_pCallUri.Items.Add("music@iptel.org");
-            m_pCallUri.Items.Add("4151595@services.sip.is");
+            m_pCallUri.Items.Add("u1@domaina.com");
+            m_pCallUri.Items.Add("u2@domainb.com");
         }
                                                                 
         #region method InitUI
@@ -180,12 +180,6 @@ namespace LumiSoft.SIP.UA.UI
             m_pCall.Image = ResManager.GetIcon("call.ico",new Size(24,24)).ToBitmap();
             m_pCall.Click += new EventHandler(m_pCall_Click);
 
-            m_pIM = new Button();
-            m_pIM.Size = new Size(45,45);
-            m_pIM.Location = new Point(250,40);
-            m_pIM.Image = ResManager.GetIcon("im.ico",new Size(24,24)).ToBitmap();
-            m_pIM.Click += new EventHandler(m_pIM_Click);
-
             m_pCallUriType = new ComboBox();
             m_pCallUriType.Size = new Size(45,20);
             m_pCallUriType.Location = new Point(5,65);
@@ -264,7 +258,6 @@ namespace LumiSoft.SIP.UA.UI
             this.Controls.Add(m_pMenu);
             this.Controls.Add(m_pToolbar);
             this.Controls.Add(m_pAccounts);
-            this.Controls.Add(m_pIM);
             this.Controls.Add(m_pCallUriType);
             this.Controls.Add(m_pCallUri);
             this.Controls.Add(m_pCall);
@@ -425,32 +418,6 @@ namespace LumiSoft.SIP.UA.UI
 
         #endregion
 
-        #region method m_pIM_Click
-
-        /// <summary>
-        /// This method is called when IM button is clicked.
-        /// </summary>
-        /// <param name="sender">Sender.</param>
-        /// <param name="e">Event data.</param>
-        private void m_pIM_Click(object sender,EventArgs e)
-        {
-            if(m_pCallUri.Text == string.Empty){
-                MessageBox.Show(this,"Please fill call URI !","Error:",MessageBoxButtons.OK,MessageBoxIcon.Error);
-                return;
-            }
-
-            string uri = m_pCallUri.Text;
-            if(uri.IndexOf(':') == -1){
-                uri = "sip:" + uri;
-            }
-
-            OpenIM(((Account)((WComboBoxItem)m_pAccounts.SelectedItem).Tag),new SIP_t_NameAddress(uri));
-
-            m_pCallUri.Text = "";
-        }
-
-        #endregion
-
         #region method wfrm_Main_FormClosed
 
         /// <summary>
@@ -464,8 +431,9 @@ namespace LumiSoft.SIP.UA.UI
             if(m_pDebugFrom != null){
                 m_pDebugFrom.Close();
             }
-            m_pUA.Stack.Stop();
-            m_pUA.Stack.Dispose();
+            if (m_pUA != null) {
+                m_pUA.Dispose();
+            }
         }
 
         #endregion
@@ -482,20 +450,6 @@ namespace LumiSoft.SIP.UA.UI
             if(this.Visible){
                 LoadSettings();
             }
-        }
-
-        #endregion
-
-        #region method IM_FormClosed
-
-        /// <summary>
-        /// This method is called when IM window has closed.
-        /// </summary>
-        /// <param name="sender">Sender.</param>
-        /// <param name="e">Event data.</param>
-        private void IM_FormClosed(object sender,FormClosedEventArgs e)
-        {
-            m_pActiveIM.Remove((wfrm_IM)sender);
         }
 
         #endregion
@@ -550,7 +504,6 @@ namespace LumiSoft.SIP.UA.UI
                         uri = "sip:" + uri;
                     }
 
-                    OpenIM(((Account)((WComboBoxItem)m_pAccounts.SelectedItem).Tag),new SIP_t_NameAddress(uri));
                 });
                 menu.Items.Add(menu_IM);
             }
@@ -710,224 +663,71 @@ namespace LumiSoft.SIP.UA.UI
         }
 
         #endregion
-        
-        #region method m_pStack_RequestReceived
-        /*
-        /// <summary>
-        /// This method is called when SIP stack get new incoming request.
-        /// </summary>
-        /// <param name="sender">Sender.</param>
-        /// <param name="e">Event data.</param>
-        private void m_pStack_RequestReceived(object sender,SIP_RequestReceivedEventArgs e)
-        {            
-            try{
-                #region Validate request-URI
 
-                /* Block rules.
-                    *) Block non SIP URI.
-                    *) Block non local AOR.
-                
-                                
-                if(!(e.Request.RequestLine.Uri is SIP_Uri)){
-                    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x416_Unsupported_URI_Scheme,e.Request));
+        private void m_pUA_IncomingCall(object sender, SIP_UA_Call_EventArgs e)
+        {
+            SIP_Uri requestUri = (SIP_Uri)e.Call.LocalUri;
 
-                    return;
-                }
-                SIP_Uri requestUri = (SIP_Uri)e.Request.RequestLine.Uri;
-
-                // If request URI is our registration contact, get AOR for it.
-                string aor = requestUri.Address;
-                foreach(SIP_UA_Registration registration in m_pStack.Registrations){                    
-                    foreach(AbsoluteUri contactUri in registration.Contacts){
-                        if(requestUri.Equals(contactUri)){
-                            aor = registration.AOR;
-                            break;
-                        }
-                    }
-                }
-                Account localAccount = null;
-                foreach(WComboBoxItem it in m_pAccounts.Items){
-                    Account account = (Account)it.Tag;
-                    if(string.Equals(account.AOR,aor,StringComparison.InvariantCultureIgnoreCase)){
-                        localAccount = account;
+            // If request URI is our registration contact, get AOR for it.
+            string aor = requestUri.Address;
+            foreach (SIP_UA_Registration registration in m_pUA.Registrations)
+            {
+                foreach (AbsoluteUri contactUri in registration.Contacts)
+                {
+                    if (requestUri.Equals(contactUri))
+                    {
+                        aor = registration.AOR;
                         break;
                     }
                 }
-                if(localAccount == null){
-                    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x404_Not_Found,e.Request));
-
-                    return;
-                }
-
-                #endregion
-
-
-                #region MESSAGE
-
-                if(e.Request.RequestLine.Method == SIP_Methods.MESSAGE){
-                    wfrm_IM frmIM = null;
-
-                    // If active IM window, use it.
-                    foreach(wfrm_IM frm in m_pActiveIM){
-                        if(frm.TargetURI.Uri.ToString() == e.Request.From.Address.Uri.ToString()){
-                            frmIM = frm;
-                            break;
-                        }
-                    }
-                    if(frmIM == null){
-                        // See if in contacts list
-                            // Open IM window
-                            // Ask user to allow/block contact
-                      
-                        this.Invoke(
-                            new MethodInvoker(delegate(){
-                                frmIM = OpenIM(localAccount,e.Request.From.Address);
-                            }),
-                            null
-                        );
-                    }
-
-                    frmIM.ProcessIM(e.Request);
-                
-                    // Send 200 response.
-                    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x200_Ok,e.Request));
-                }
-
-                #endregion
-
-                #region INVITE
-
-                else if(e.Request.RequestLine.Method == SIP_Methods.INVITE){
-                    #region Incoming call
-
-                    if(e.Dialog == null){
-                        #region Validate incoming call
-
-                        // TODO: Limit incoming calls count
-                        // We don't accept more than 1 call at time.
-                        //if(m_pIncomingCallUI != null || m_pCall != null){
-                        //    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x600_Busy_Everywhere,e.Request));
-
-                        //    return;
-                        //}
-
-                        // We don't accept SDP offerless calls.
-                        if(e.Request.ContentType == null || e.Request.ContentType.ToLower().IndexOf("application/sdp") == -1){
-                            e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x606_Not_Acceptable + ": We don't accpet SDP offerless calls.",e.Request));
-
-                            return;
-                        }
-
-                        SDP_Message sdpOffer = SDP_Message.Parse(Encoding.UTF8.GetString(e.Request.Data));
-
-                        // Check if we can accept any media stream.
-                        bool canAccept = false;
-                        foreach(SDP_MediaDescription media in sdpOffer.MediaDescriptions){
-                            if(CanSupportMedia(media)){
-                                canAccept = true;
-
-                                break;
-                            }
-                        }
-                        if(!canAccept){
-                            e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x606_Not_Acceptable,e.Request));
-
-                            return;
-                        }
-                        
-                        #endregion
-
-                        // We need BeginInvoke here to access UI, we are running on thread pool thread.
-                        this.BeginInvoke(new MethodInvoker(delegate(){
-                            m_pCallTab.SelectedTab = m_pCallTab.TabPages["calls"];
-
-                            // Create call, all continuing processing done in call class.
-                            wctrl_Call call = new wctrl_Call(this,m_pAudioOutDevice,m_pAudioInDevice);
-                            m_pCallTab_Calls_Calls.AddCall(call);
-                            call.InitIncoming(localAccount,e.ServerTransaction);
-                        }));
-                    }
-
-                    #endregion
-
-                    else{ 
-                        // Unknown error, call didn't process re-INVITE.
-                        e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x500_Server_Internal_Error,e.Request));
-                    }
-                }
-
-                #endregion
-
-                #region CANCEL
-
-                else if(e.Request.RequestLine.Method == SIP_Methods.CANCEL){
-                    /* RFC 3261 9.2.
-                        If the UAS did not find a matching transaction for the CANCEL
-                        according to the procedure above, it SHOULD respond to the CANCEL
-                        with a 481 (Call Leg/Transaction Does Not Exist).
-                  
-                        Regardless of the method of the original request, as long as the
-                        CANCEL matched an existing transaction, the UAS answers the CANCEL
-                        request itself with a 200 (OK) response.
-                    
-
-                    SIP_ServerTransaction trToCancel = m_pStack.TransactionLayer.MatchCancelToTransaction(e.Request);
-                    if(trToCancel != null){
-                        trToCancel.Cancel();
-                        e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x200_Ok,e.Request));
-                    }
-                    else{
-                        e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x481_Call_Transaction_Does_Not_Exist,e.Request));
-                    }
-                }
-
-                #endregion
-
-                #region BYE
-
-                else if(e.Request.RequestLine.Method == SIP_Methods.BYE){
-                    /* RFC 3261 15.1.2.
-                        If the BYE does not match an existing dialog, the UAS core SHOULD generate a 481
-                        (Call/Transaction Does Not Exist) response and pass that to the server transaction.
-                    
-
-                    // Currently we match BYE to dialog and it processes it,
-                    // so BYE what reaches here doesnt match to any dialog.
-
-                    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x481_Call_Transaction_Does_Not_Exist,e.Request));
-                }
-
-                #endregion
-
-                #region ACK
-
-                else if(e.Request.RequestLine.Method == SIP_Methods.ACK){
-                    // Abandoned ACK, just skip it.
-                }
-
-                #endregion
-
-                #region Other
-
-                else
+            }
+            Account localAccount = null;
+            foreach (WComboBoxItem it in m_pAccounts.Items)
+            {
+                Account account = (Account)it.Tag;
+                if (string.Equals(account.AOR, aor, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    // ACK is response less method.
-                    if(e.Request.RequestLine.Method != SIP_Methods.ACK){
-                        e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x501_Not_Implemented,e.Request));
-                    }
+                    localAccount = account;
+                    break;
                 }
-
-                #endregion
             }
-            catch(Exception x){
-                e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x500_Server_Internal_Error,e.Request));
+            if (localAccount == null)
+            {
+                e.Call.Reject(SIP_ResponseCodes.x404_Not_Found);
 
-                OnError(x);
+                return;
             }
+
+            SDP_Message sdpOffer = e.Call.RemoteSDP;
+
+            // Check if we can accept any media stream.
+            bool canAccept = false;
+            foreach(SDP_MediaDescription media in sdpOffer.MediaDescriptions){
+                if(CanSupportMedia(media)){
+                    canAccept = true;
+
+                    break;
+                }
+            }
+            if(!canAccept){
+                e.Call.Reject(SIP_ResponseCodes.x606_Not_Acceptable);
+                return;
+            }
+            
+
+            // We need BeginInvoke here to access UI, we are running on thread pool thread.
+            this.BeginInvoke(new MethodInvoker(delegate(){
+                m_pCallTab.SelectedTab = m_pCallTab.TabPages["calls"];
+
+                // Create call, all continuing processing done in call class.
+                wctrl_Call call = new wctrl_Call(this,m_pAudioOutDevice,m_pAudioInDevice);
+                m_pCallTab_Calls_Calls.AddCall(call);
+                call.InitIncoming(localAccount,e.Call);
+            }));
+            
+
         }
-        */
-        #endregion
-        
+
         #region method m_pStack_Error
 
         /// <summary>
@@ -964,7 +764,6 @@ namespace LumiSoft.SIP.UA.UI
                 throw new ArgumentNullException("to");
             }
 
-            PutAllCallsOnHold();
 
             // Create call and start calling.
             wctrl_Call call = new wctrl_Call(this,m_pAudioOutDevice,m_pAudioInDevice);
@@ -977,34 +776,6 @@ namespace LumiSoft.SIP.UA.UI
                                                                 
         #endregion
 
-        #region method OpenIM
-
-        /// <summary>
-        /// Opens new IM window to the specified recipient.
-        /// </summary>
-        /// <param name="account">Local account.</param>
-        /// <param name="to">Remote party.</param>
-        /// <returns>Returns created IM window.</returns>
-        /// <exception cref="ArgumentNullException">Is raised when <b>account</b> or <b>to</b> is null reference.</exception>
-        public wfrm_IM OpenIM(Account account,SIP_t_NameAddress to)
-        {
-            if(account == null){
-                throw new ArgumentNullException("account");
-            }
-            if(to == null){
-                throw new ArgumentNullException("to");
-            }
-
-            wfrm_IM frmIM = new wfrm_IM(this,account,to);
-            m_pActiveIM.Add(frmIM);
-            frmIM.FormClosed += new FormClosedEventHandler(IM_FormClosed);
-            frmIM.Visible = true;
-
-            return frmIM;
-        }
-
-        #endregion
-
         #region method PutAllCallsOnHold
 
         /// <summary>
@@ -1014,8 +785,9 @@ namespace LumiSoft.SIP.UA.UI
         {
             // Put all active calls on hold.
             foreach(wctrl_Call c in this.Calls){
-                if(c.State == SIP_CallState.Active && !c.IsLocalOnHold){
-                    c.PutCallOnHold();
+                if (c.State == SIP_UA_CallState.Active && !c.IsLocalOnHold)
+                {
+                    //c.PutCallOnHold();
                 }
             }
 
@@ -1024,7 +796,8 @@ namespace LumiSoft.SIP.UA.UI
             while(start.AddSeconds(5) > DateTime.Now){
                 bool allonHold = true;
                 foreach(wctrl_Call c in this.Calls){
-                    if(c.State == SIP_CallState.Active && !c.IsLocalOnHold){
+                    if (c.State == SIP_UA_CallState.Active && !c.IsLocalOnHold)
+                    {
                         allonHold = false;
                     }
                 }
@@ -1138,29 +911,35 @@ namespace LumiSoft.SIP.UA.UI
             #endregion
 
             m_pUA.Stack.BindInfo = Settings.Bindings;
-            //m_pUA.Stack.RequestReceived += new EventHandler<SIP_RequestReceivedEventArgs>(m_pStack_RequestReceived);
-            // TODO:
-            //m_pStack.Error
-            m_pUA.Stack.Credentials.AddRange(this.Settings.Credentials.ToArray());
-            m_pUA.Stack.Start();
+            
+            
+            m_pStack.Credentials.AddRange(this.Settings.Credentials.ToArray());
+            m_pStack.MinimumExpireTime = 30;
+            m_pStack.Start();
+            m_pUA.IncomingCall += new EventHandler<SIP_UA_Call_EventArgs>(m_pUA_IncomingCall);
+            
+            
             foreach(Account account in this.Settings.Accounts){
                 if(account.Register){
                     SIP_Uri registrarServer = SIP_Uri.Parse(account.RegistrarServer);
 
-                    SIP_UA_Registration registration = m_pUA.Stack.CreateRegistration(
+                    SIP_UA_Registration registration = m_pUA.CreateRegistration(
                         registrarServer,
                         account.AOR,
                         AbsoluteUri.Parse(registrarServer.Scheme + ":" + account.AOR.Split('@')[0] + "@auto-allocate"),
                         account.RegisterInterval
                     );
-                    registration.StateChanged += new EventHandler(Registration_StateChanged);
-                    registration.BeginRegister(true);
-
+                    this.BeginInvoke(new MethodInvoker(delegate(){
+                        registration.StateChanged += new EventHandler(Registration_StateChanged);
+                        registration.BeginRegister(true);
+                    }));
                     // TODO: If TLS supported, add TLS registration too.
                 }
 
                 m_pAccounts.Items.Add(new WComboBoxItem(account.AOR,account));
-            }            
+                
+            }
+
 
             if(m_pAccounts.Items.Count > 0){
                 m_pAccounts.SelectedIndex = 0;
@@ -1196,6 +975,10 @@ namespace LumiSoft.SIP.UA.UI
 
         #endregion
 
+        internal void Remove_wfrm_Call(wctrl_Call call)
+        {
+            m_pCallTab_Calls_Calls.RemoveCall(call);
+        }
 
         #region method CanSupportMedia
 

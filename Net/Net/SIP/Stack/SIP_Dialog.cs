@@ -367,14 +367,17 @@ namespace LumiSoft.Net.SIP.Stack
                 else{  
                     SIP_Uri topmostRoute = ((SIP_Uri)m_pRouteSet[0].Address.Uri);
                     if(topmostRoute.Param_Lr){
-                        request.RequestLine.Uri = m_pRemoteTarget;
-                        for(int i=0;i<m_pRouteSet.Length;i++){
+                        //sonicnan
+                        //request.RequestLine.Uri = m_pRemoteTarget;
+                        for (int i = 0; i < m_pRouteSet.Length; i++)
+                        {
                             request.Route.Add(m_pRouteSet[i].ToStringValue());
                         }
                     }
                     else{
                         request.RequestLine.Uri = SIP_Utils.UriToRequestUri(topmostRoute);
-                        for(int i=1;i<m_pRouteSet.Length;i++){
+                        for (int i = 0; i < m_pRouteSet.Length; i++)
+                        {
                             request.Route.Add(m_pRouteSet[i].ToStringValue());
                         }
                     }

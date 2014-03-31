@@ -36,9 +36,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="LumiSoft.Net, Version=2.0.5191.2751, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="LumiSoft.Net, Version=2.0.5197.33368, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\Desktop\Net\Net\bin\Debug\LumiSoft.Net.dll</HintPath>
+      <HintPath>..\..\Net\Net\bin\Debug\LumiSoft.Net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />

@@ -354,6 +354,7 @@ namespace LumiSoft.Net.SIP.Proxy
                     }
 
                     requestContext.SetUser(userName);
+                    request.ProxyAuthorization.RemoveAll();
                 }
             }
 
@@ -403,8 +404,7 @@ namespace LumiSoft.Net.SIP.Proxy
             // Strict route - handle it.
             if((request.RequestLine.Uri is SIP_Uri) && IsRecordRoute(((SIP_Uri)request.RequestLine.Uri)) && request.Route.GetAllValues().Length > 0){
                 
-                // remove by sonicnan
-                //request.RequestLine.Uri = request.Route.GetAllValues()[request.Route.GetAllValues().Length - 1].Address.Uri;
+                request.RequestLine.Uri = request.Route.GetAllValues()[request.Route.GetAllValues().Length - 1].Address.Uri;
                 
                 SIP_t_AddressParam[] routes = request.Route.GetAllValues();
                 route = (SIP_Uri)routes[routes.Length - 1].Address.Uri;

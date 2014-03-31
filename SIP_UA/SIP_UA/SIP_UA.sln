@@ -5,7 +5,7 @@ VisualStudioVersion = 12.0.30110.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SIP_UA", "SIP_UA.csproj", "{E64384AC-491C-4BA5-B7E4-FB942B102632}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Net", "C:\Users\Putthimongkol\Desktop\Net\Net\Net.csproj", "{7AB36CCF-5FFD-4780-A54E-A102ECA028B5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Net", "..\..\Net\Net\Net.csproj", "{7AB36CCF-5FFD-4780-A54E-A102ECA028B5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

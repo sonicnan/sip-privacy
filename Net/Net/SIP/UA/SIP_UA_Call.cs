@@ -12,7 +12,7 @@ namespace LumiSoft.Net.SIP.UA
     /// <summary>
     /// This class represent SIP UA call.
     /// </summary>
-    [Obsolete("Use SIP stack instead.")]
+    //[Obsolete("Use SIP stack instead.")]
     public class SIP_UA_Call : IDisposable
     {
         private SIP_UA_CallState          m_State                     = SIP_UA_CallState.WaitingForStart;
@@ -258,9 +258,27 @@ namespace LumiSoft.Net.SIP.UA
         /// <summary>
         /// Sends ringing to remote party.
         /// </summary>
-        /// <param name="sdp">Early media answer or early media offer when initial INVITE don't have SDP.</param>
         /// <exception cref="ObjectDisposedException">Is raised when this object is disposed and and this method is accessed.</exception>
         /// <exception cref="InvalidOperationException">Is raised when call is not in valid state and this method is called.</exception>
+        public void SendRinging()
+        {
+            if (m_State == SIP_UA_CallState.Disposed)
+            {
+                throw new ObjectDisposedException(this.GetType().Name);
+            }
+            if (m_State != SIP_UA_CallState.WaitingToAccept)
+            {
+                throw new InvalidOperationException("Accept method can be called only in 'SIP_UA_CallState.WaitingToAccept' state.");
+            }
+
+            SIP_Response response = m_pUA.Stack.CreateResponse(SIP_ResponseCodes.x180_Ringing, m_pInitialInviteTransaction.Request, m_pInitialInviteTransaction.Flow);
+            
+            m_pInitialInviteTransaction.SendResponse(response);
+        }
+
+        /// <summary>
+        /// Sends ringing to remote party.
+        /// </summary>
         public void SendRinging(SDP_Message sdp)
         {
             if(m_State == SIP_UA_CallState.Disposed){
@@ -393,7 +411,7 @@ namespace LumiSoft.Net.SIP.UA
         /// Starts terminating call. To get when call actually terminates, monitor <b>StateChanged</b> event.
         /// </summary>
         /// <exception cref="ObjectDisposedException">Is raised when this object is disposed and and this method is accessed.</exception>
-        public void Terminate()
+        public void Terminate(String reason,bool sendBye)
         {
             lock(m_pLock){
                 if(m_State == SIP_UA_CallState.Disposed){
@@ -412,9 +430,24 @@ namespace LumiSoft.Net.SIP.UA
                     SetState(SIP_UA_CallState.Terminated);
                 }
                 else if(m_State == SIP_UA_CallState.Active){
+                    SIP_Request bye = m_pDialog.CreateRequest(SIP_Methods.BYE);
+                    if (!string.IsNullOrEmpty(reason))
+                    {
+                        SIP_t_ReasonValue r = new SIP_t_ReasonValue();
+                        r.Protocol = "SIP";
+                        r.Text = reason;
+                        bye.Reason.Add(r.ToStringValue());
+                    }
+
+                    // Send BYE, just wait BYE to complete, we don't care about response code.
+                    SIP_RequestSender sender = m_pDialog.CreateRequestSender(bye);
+                    sender.Completed += delegate(object s, EventArgs a)
+                    {
+                        SetState(SIP_UA_CallState.Terminated);
+                    };
+                    sender.Start();
                     m_pDialog.Terminate();
 
-                    SetState(SIP_UA_CallState.Terminated);
                 }
                 else if(m_pInitialInviteSender != null){
                     /* RFC 3261 15.

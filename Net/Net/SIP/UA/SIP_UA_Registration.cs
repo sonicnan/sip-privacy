@@ -6,7 +6,7 @@ using System.Net;
 using LumiSoft.Net.SIP.Message;
 using LumiSoft.Net.SIP.Stack;
 
-namespace LumiSoft.Net.SIP.Stack
+namespace LumiSoft.Net.SIP.UA
 {
     /// <summary>
     /// This class represent SIP UA registration.

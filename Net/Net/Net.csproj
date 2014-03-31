@@ -125,6 +125,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="AsyncOP.cs" />
+    <None Include="ClassDiagram1.cd" />
     <None Include="Media\Codec\Audio\ILBC.cs" />
     <Compile Include="AsyncOP_State.cs" />
     <Compile Include="AUTH\AUTH_Gmail_OAuth1_3leg.cs" />
@@ -546,8 +547,8 @@
     <Compile Include="SIP\UA\SIP_UA_Call.cs" />
     <Compile Include="SIP\UA\SIP_UA_CallState.cs" />
     <Compile Include="SIP\UA\SIP_UA_Call_EventArgs.cs" />
-    <Compile Include="SIP\Stack\SIP_UA_Registration.cs" />
-    <Compile Include="SIP\Stack\SIP_UA_RegistrationState.cs" />
+    <Compile Include="SIP\UA\SIP_UA_Registration.cs" />
+    <Compile Include="SIP\UA\SIP_UA_RegistrationState.cs" />
     <Compile Include="SMTP\Client\SMTP_Client.cs" />
     <Compile Include="SMTP\Client\SMTP_ClientException.cs" />
     <Compile Include="SMTP\Relay\Relay_Mode.cs" />

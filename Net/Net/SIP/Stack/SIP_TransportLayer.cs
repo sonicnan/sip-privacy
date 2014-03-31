@@ -516,6 +516,9 @@ namespace LumiSoft.Net.SIP.Stack
 
                 #region Response
 
+                if (Encoding.UTF8.GetString(message, 0, 6).ToUpper().StartsWith("INVITE"))
+                this.Stack.Logger.AddRead("", null, 2, Encoding.UTF8.GetString(message, 0, message.Length).ToUpper(), flow.LocalEP, flow.RemoteEP);
+
                 if(Encoding.UTF8.GetString(message,0,3).ToUpper().StartsWith("SIP")){
 
                     #region Parse and validate response

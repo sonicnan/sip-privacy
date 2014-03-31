@@ -33,8 +33,7 @@ namespace LumiSoft.Net.SIP.Stack
         private int                          m_MaximumMessageSize = 1000000;
         private int                          m_MinSessionExpires  = 90;
         private int                          m_SessionExpires     = 1800;
-        private List<NetworkCredential>      m_pCredentials       = null;        
-        private List<SIP_UA_Registration>    m_pRegistrations     = null;
+        private List<NetworkCredential>      m_pCredentials       = null;
         private SIP_t_CallID                 m_RegisterCallID     = null;
         private Logger                       m_pLogger            = null;
         private Dns_Client                   m_pDnsClient         = null;
@@ -49,7 +48,6 @@ namespace LumiSoft.Net.SIP.Stack
             m_pTransactionLayer = new SIP_TransactionLayer(this);
             m_pNonceManager = new Auth_HttpDigest_NonceManager();
             m_pProxyServers = new List<SIP_Uri>();
-            m_pRegistrations = new List<SIP_UA_Registration>();
             m_pCredentials = new List<NetworkCredential>();
             m_RegisterCallID = SIP_t_CallID.CreateCallID();
             
@@ -139,11 +137,6 @@ namespace LumiSoft.Net.SIP.Stack
                 *) Terminate dialogs.
                 *) Wait while all active transactions has terminated or timeout reaches.
             */
-
-            // Unregister registrations.
-            foreach(SIP_UA_Registration reg in m_pRegistrations.ToArray()){
-                reg.BeginUnregister(true);
-            }
 
             // Terminate dialogs.
             foreach(SIP_Dialog dialog in m_pTransactionLayer.Dialogs){
@@ -936,52 +929,6 @@ namespace LumiSoft.Net.SIP.Stack
 
         #endregion
 
-        #region method CreateRegistration
-
-        /// <summary>
-        /// Creates new registration.
-        /// </summary>
-        /// <param name="server">Registrar server URI. For example: sip:domain.com.</param>
-        /// <param name="aor">Registration address of record. For example: user@domain.com.</param>
-        /// <param name="contact">Contact URI.</param>
-        /// <param name="expires">Gets after how many seconds reigisration expires.</param>
-        /// <returns>Returns created registration.</returns>
-        /// <exception cref="ObjectDisposedException">Is raised when this object is disposed and and this method is accessed.</exception>
-        /// <exception cref="ArgumentNullException">Is raised when <b>server</b>,<b>aor</b> or <b>contact</b> is null reference.</exception>
-        /// <exception cref="ArgumentException">Is raised when any of the arguments has invalid value.</exception>
-        public SIP_UA_Registration CreateRegistration(SIP_Uri server,string aor,AbsoluteUri contact,int expires)
-        {
-            if(m_State == SIP_StackState.Disposed){
-                throw new ObjectDisposedException(this.GetType().Name);
-            }
-            if(server == null){
-                throw new ArgumentNullException("server");
-            }
-            if(aor == null){
-                throw new ArgumentNullException("aor");
-            }
-            if(aor == string.Empty){
-                throw new ArgumentException("Argument 'aor' value must be specified.");
-            }
-            if(contact == null){
-                throw new ArgumentNullException("contact");
-            }
-
-            lock(m_pRegistrations){
-                SIP_UA_Registration registration = new SIP_UA_Registration(this,server,aor,contact,expires);
-                registration.Disposed += new EventHandler(delegate(object s,EventArgs e){
-                    if(m_State != SIP_StackState.Disposed){
-                        m_pRegistrations.Remove(registration);
-                    }
-                });
-                m_pRegistrations.Add(registration);
-
-                return registration;
-            }
-        }
-
-        #endregion
-
 
         #region Properties Implementation
 
@@ -1374,21 +1321,6 @@ namespace LumiSoft.Net.SIP.Stack
                 }
                 
                 return m_pLogger; 
-            }
-        }
-
-        /// <summary>
-        /// Gets current registrations.
-        /// </summary>
-        /// <exception cref="ObjectDisposedException">Is raised when this object is disposed and and this property is accessed.</exception>
-        public SIP_UA_Registration[] Registrations
-        {
-            get{
-                if(m_State == SIP_StackState.Disposed){
-                    throw new ObjectDisposedException(this.GetType().Name);
-                }
-
-                return m_pRegistrations.ToArray();
             }
         }
 

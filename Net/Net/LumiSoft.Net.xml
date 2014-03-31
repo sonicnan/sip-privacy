@@ -27910,6 +27910,11 @@
             Default constructor.
             </summary>
         </member>
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA.#ctor(LumiSoft.Net.SIP.Stack.SIP_Stack)">
+            <summary>
+            Default constructor with SIP_Stack.
+            </summary>
+        </member>
         <member name="M:LumiSoft.Net.SIP.UA.SIP_UA.Dispose">
             <summary>
             Cleans up any resources being used.
@@ -27922,12 +27927,31 @@
             <param name="sender">Sender.</param>
             <param name="e">Event data.</param>
         </member>
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA.OnRequestReceived(LumiSoft.Net.SIP.Stack.SIP_RequestReceivedEventArgs)">
+            <summary>
+            This method is called when new request is received.
+            </summary>
+            <param name="e">Request event arguments.</param>
+        </member>
         <member name="M:LumiSoft.Net.SIP.UA.SIP_UA.Call_StateChanged(System.Object,System.EventArgs)">
             <summary>
             Thsi method is called when call state has chnaged.
             </summary>
             <param name="sender">Sender.</param>
             <param name="e">Event data.</param>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA.CreateRegistration(LumiSoft.Net.SIP_Uri,System.String,LumiSoft.Net.AbsoluteUri,System.Int32)">
+            <summary>
+            Creates new registration.
+            </summary>
+            <param name="server">Registrar server URI. For example: sip:domain.com.</param>
+            <param name="aor">Registration address of record. For example: user@domain.com.</param>
+            <param name="contact">Contact URI.</param>
+            <param name="expires">Gets after how many seconds reigisration expires.</param>
+            <returns>Returns created registration.</returns>
+            <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this method is accessed.</exception>
+            <exception cref="T:System.ArgumentNullException">Is raised when <b>server</b>,<b>aor</b> or <b>contact</b> is null reference.</exception>
+            <exception cref="T:System.ArgumentException">Is raised when any of the arguments has invalid value.</exception>
         </member>
         <member name="M:LumiSoft.Net.SIP.UA.SIP_UA.CreateCall(LumiSoft.Net.SIP.Stack.SIP_Request)">
             <summary>
@@ -27937,12 +27961,6 @@
             <returns>Returns created call.</returns>
             <exception cref="T:System.ArgumentNullException">Is raised when <b>invite</b> is null reference.</exception>
             <exception cref="T:System.ArgumentException">Is raised when any of the argumnets has invalid value.</exception>
-        </member>
-        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA.OnRequestReceived(LumiSoft.Net.SIP.Stack.SIP_RequestReceivedEventArgs)">
-            <summary>
-            Raises <b>RequestReceived</b> event.
-            </summary>
-            <param name="request">SIP request.</param>
         </member>
         <member name="M:LumiSoft.Net.SIP.UA.SIP_UA.OnIncomingCall(LumiSoft.Net.SIP.UA.SIP_UA_Call)">
             <summary>
@@ -27967,10 +27985,11 @@
             </summary>
             <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this property is accessed.</exception>
         </member>
-        <member name="E:LumiSoft.Net.SIP.UA.SIP_UA.RequestReceived">
+        <member name="P:LumiSoft.Net.SIP.UA.SIP_UA.Registrations">
             <summary>
-            Is raised when user agent get new SIP request.
+            Gets current registrations.
             </summary>
+            <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this property is accessed.</exception>
         </member>
         <member name="E:LumiSoft.Net.SIP.UA.SIP_UA.IncomingCall">
             <summary>
@@ -28197,13 +28216,17 @@
             <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this method is accessed.</exception>
             <exception cref="T:System.InvalidOperationException">Is raised when call is not in valid state.</exception>
         </member>
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Call.SendRinging">
+            <summary>
+            Sends ringing to remote party.
+            </summary>
+            <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this method is accessed.</exception>
+            <exception cref="T:System.InvalidOperationException">Is raised when call is not in valid state and this method is called.</exception>
+        </member>
         <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Call.SendRinging(LumiSoft.Net.SDP.SDP_Message)">
             <summary>
             Sends ringing to remote party.
             </summary>
-            <param name="sdp">Early media answer or early media offer when initial INVITE don't have SDP.</param>
-            <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this method is accessed.</exception>
-            <exception cref="T:System.InvalidOperationException">Is raised when call is not in valid state and this method is called.</exception>
         </member>
         <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Call.Accept(LumiSoft.Net.SDP.SDP_Message)">
             <summary>
@@ -28233,7 +28256,7 @@
             <exception cref="T:System.ArgumentNullException">Is raised when <b>contacts</b> is null.</exception>
             <exception cref="T:System.ArgumentException">Is raised when any of the arguments has invalid value.</exception>
         </member>
-        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Call.Terminate">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Call.Terminate(System.String,System.Boolean)">
             <summary>
             Starts terminating call. To get when call actually terminates, monitor <b>StateChanged</b> event.
             </summary>
@@ -28388,12 +28411,12 @@
             Gets call.
             </summary>
         </member>
-        <member name="T:LumiSoft.Net.SIP.Stack.SIP_UA_Registration">
+        <member name="T:LumiSoft.Net.SIP.UA.SIP_UA_Registration">
             <summary>
             This class represent SIP UA registration.
             </summary>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.#ctor(LumiSoft.Net.SIP.Stack.SIP_Stack,LumiSoft.Net.SIP_Uri,System.String,LumiSoft.Net.AbsoluteUri,System.Int32)">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.#ctor(LumiSoft.Net.SIP.Stack.SIP_Stack,LumiSoft.Net.SIP_Uri,System.String,LumiSoft.Net.AbsoluteUri,System.Int32)">
             <summary>
             Default constructor.
             </summary>
@@ -28405,169 +28428,169 @@
             <exception cref="T:System.ArgumentNullException">Is raised when <b>ua</b>,<b>server</b>,<b>transport</b>,<b>aor</b> or <b>contact</b> is null reference.</exception>
             <exception cref="T:System.ArgumentException">Is raised when any of the arguments contains invalid value.</exception>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.Dispose">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.Dispose">
             <summary>
             Cleans up any resources being used.
             </summary>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.m_pTimer_Elapsed(System.Object,System.Timers.ElapsedEventArgs)">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.m_pTimer_Elapsed(System.Object,System.Timers.ElapsedEventArgs)">
             <summary>
             This method is raised when registration needs to refresh server registration.
             </summary>
             <param name="sender">Sender.</param>
             <param name="e">Event data.</param>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.m_pRegisterSender_ResponseReceived(System.Object,LumiSoft.Net.SIP.Stack.SIP_ResponseReceivedEventArgs)">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.m_pRegisterSender_ResponseReceived(System.Object,LumiSoft.Net.SIP.Stack.SIP_ResponseReceivedEventArgs)">
             <summary>
             This method is called when REGISTER has finished.
             </summary>
             <param name="sender">Sender.</param>
             <param name="e">Event data.</param>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.m_pUnregisterSender_ResponseReceived(System.Object,LumiSoft.Net.SIP.Stack.SIP_ResponseReceivedEventArgs)">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.m_pUnregisterSender_ResponseReceived(System.Object,LumiSoft.Net.SIP.Stack.SIP_ResponseReceivedEventArgs)">
             <summary>
             This method is called when un-REGISTER has finished.
             </summary>
             <param name="sender">Sender.</param>
             <param name="e">Event data.</param>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.BeginRegister(System.Boolean)">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.BeginRegister(System.Boolean)">
             <summary>
             Starts registering.
             </summary>
             <param name="autoRefresh">If true, registration takes care of refreshing itself to registrar server.</param>
             <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this method is accessed.</exception>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.BeginUnregister(System.Boolean)">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.BeginUnregister(System.Boolean)">
             <summary>
             Starts unregistering.
             </summary>
             <param name="dispose">If true, registration will be disposed after unregister.</param>
             <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this method is accessed.</exception>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.SetState(LumiSoft.Net.SIP.Stack.SIP_UA_RegistrationState)">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.SetState(LumiSoft.Net.SIP.UA.SIP_UA_RegistrationState)">
             <summary>
             Changes current registration state.
             </summary>
             <param name="newState">New registration state.</param>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.OnStateChanged">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.OnStateChanged">
             <summary>
             Raises event <b>StateChanged</b>.
             </summary>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.OnRegistered">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.OnRegistered">
             <summary>
             Raises event <b>Registered</b>.
             </summary>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.OnUnregistered">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.OnUnregistered">
             <summary>
             Raises event <b>Unregistered</b>.
             </summary>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.OnError(LumiSoft.Net.SIP.Stack.SIP_ResponseReceivedEventArgs)">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.OnError(LumiSoft.Net.SIP.Stack.SIP_ResponseReceivedEventArgs)">
             <summary>
             Raises event <b>Error</b>.
             </summary>
             <param name="e">Event data.</param>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.OnDisposed">
+        <member name="M:LumiSoft.Net.SIP.UA.SIP_UA_Registration.OnDisposed">
             <summary>
             Raises event <b>Disposed</b>.
             </summary>
         </member>
-        <member name="P:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.IsDisposed">
+        <member name="P:LumiSoft.Net.SIP.UA.SIP_UA_Registration.IsDisposed">
             <summary>
             Gets if this object is disposed.
             </summary>
         </member>
-        <member name="P:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.State">
+        <member name="P:LumiSoft.Net.SIP.UA.SIP_UA_Registration.State">
             <summary>
             Gets registration state.
             </summary>
         </member>
-        <member name="P:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.Expires">
+        <member name="P:LumiSoft.Net.SIP.UA.SIP_UA_Registration.Expires">
             <summary>
             Gets after how many seconds contact expires.
             </summary>
             <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this property is accessed.</exception>
         </member>
-        <member name="P:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.AOR">
+        <member name="P:LumiSoft.Net.SIP.UA.SIP_UA_Registration.AOR">
             <summary>
             Gets registration address of record.
             </summary>
             <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this property is accessed.</exception>
         </member>
-        <member name="P:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.Contact">
+        <member name="P:LumiSoft.Net.SIP.UA.SIP_UA_Registration.Contact">
             <summary>
             Gets registration contact URI.
             </summary>
             <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this property is accessed.</exception>
         </member>
-        <member name="P:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.Contacts">
+        <member name="P:LumiSoft.Net.SIP.UA.SIP_UA_Registration.Contacts">
             <summary>
             Gets registrar server all contacts registered for this AOR.
             </summary>
             <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this property is accessed.</exception>
         </member>
-        <member name="P:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.AutoFixContact">
+        <member name="P:LumiSoft.Net.SIP.UA.SIP_UA_Registration.AutoFixContact">
             <summary>
             If true and contact is different than received or rport, received and rport is used as contact.
             </summary>
             <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this property is accessed.</exception>
         </member>
-        <member name="E:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.StateChanged">
+        <member name="E:LumiSoft.Net.SIP.UA.SIP_UA_Registration.StateChanged">
             <summary>
             This event is raised when registration state has changed.
             </summary>
         </member>
-        <member name="E:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.Registered">
+        <member name="E:LumiSoft.Net.SIP.UA.SIP_UA_Registration.Registered">
             <summary>
             This event is raised when REGISTER has completed successfully.
             </summary>
         </member>
-        <member name="E:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.Unregistered">
+        <member name="E:LumiSoft.Net.SIP.UA.SIP_UA_Registration.Unregistered">
             <summary>
             This event is raised when un-REGISTER has completed successfully.
             </summary>
         </member>
-        <member name="E:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.Error">
+        <member name="E:LumiSoft.Net.SIP.UA.SIP_UA_Registration.Error">
             <summary>
             This event is raised when REGISTER/un-REGISTER has failed.
             </summary>
         </member>
-        <member name="E:LumiSoft.Net.SIP.Stack.SIP_UA_Registration.Disposed">
+        <member name="E:LumiSoft.Net.SIP.UA.SIP_UA_Registration.Disposed">
             <summary>
             This event is raised when registration has disposed.
             </summary>
         </member>
-        <member name="T:LumiSoft.Net.SIP.Stack.SIP_UA_RegistrationState">
+        <member name="T:LumiSoft.Net.SIP.UA.SIP_UA_RegistrationState">
             <summary>
             This class specifies SIP UA registration state.
             </summary>
         </member>
-        <member name="F:LumiSoft.Net.SIP.Stack.SIP_UA_RegistrationState.Registering">
+        <member name="F:LumiSoft.Net.SIP.UA.SIP_UA_RegistrationState.Registering">
             <summary>
             Registration is currently registering.
             </summary>
         </member>
-        <member name="F:LumiSoft.Net.SIP.Stack.SIP_UA_RegistrationState.Registered">
+        <member name="F:LumiSoft.Net.SIP.UA.SIP_UA_RegistrationState.Registered">
             <summary>
             Registration is active.
             </summary>
         </member>
-        <member name="F:LumiSoft.Net.SIP.Stack.SIP_UA_RegistrationState.Unregistered">
+        <member name="F:LumiSoft.Net.SIP.UA.SIP_UA_RegistrationState.Unregistered">
             <summary>
             Registration is not registered to registrar server.
             </summary>
         </member>
-        <member name="F:LumiSoft.Net.SIP.Stack.SIP_UA_RegistrationState.Error">
+        <member name="F:LumiSoft.Net.SIP.UA.SIP_UA_RegistrationState.Error">
             <summary>
             Registering has failed.
             </summary>
         </member>
-        <member name="F:LumiSoft.Net.SIP.Stack.SIP_UA_RegistrationState.Disposed">
+        <member name="F:LumiSoft.Net.SIP.UA.SIP_UA_RegistrationState.Disposed">
             <summary>
             Registration has disposed.
             </summary>
@@ -44678,19 +44701,6 @@
             <returns>Returns target hops(address,port,transport) of the specified URI.</returns>
             <exception cref="T:System.ArgumentNullException">Is raised when <b>uri</b> is null reference.</exception>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_Stack.CreateRegistration(LumiSoft.Net.SIP_Uri,System.String,LumiSoft.Net.AbsoluteUri,System.Int32)">
-            <summary>
-            Creates new registration.
-            </summary>
-            <param name="server">Registrar server URI. For example: sip:domain.com.</param>
-            <param name="aor">Registration address of record. For example: user@domain.com.</param>
-            <param name="contact">Contact URI.</param>
-            <param name="expires">Gets after how many seconds reigisration expires.</param>
-            <returns>Returns created registration.</returns>
-            <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this method is accessed.</exception>
-            <exception cref="T:System.ArgumentNullException">Is raised when <b>server</b>,<b>aor</b> or <b>contact</b> is null reference.</exception>
-            <exception cref="T:System.ArgumentException">Is raised when any of the arguments has invalid value.</exception>
-        </member>
         <member name="M:LumiSoft.Net.SIP.Stack.SIP_Stack.OnValidateRequest(LumiSoft.Net.SIP.Stack.SIP_Request,System.Net.IPEndPoint)">
             <summary>
             Is called by Transport layer when new incoming SIP request is received.
@@ -44841,12 +44851,6 @@
             Gets SIP logger.
             </summary>
             <exception cref="T:System.ObjectDisposedException">Is raised when this class is Disposed and this property is accessed.</exception>
-        </member>
-        <member name="P:LumiSoft.Net.SIP.Stack.SIP_Stack.Registrations">
-            <summary>
-            Gets current registrations.
-            </summary>
-            <exception cref="T:System.ObjectDisposedException">Is raised when this object is disposed and and this property is accessed.</exception>
         </member>
         <member name="E:LumiSoft.Net.SIP.Stack.SIP_Stack.ValidateRequest">
             <summary>

@@ -148,6 +148,8 @@ namespace SIP_Proxy_demo
             m_pSipProxy.IsLocalUri += new SIP_IsLocalUriEventHandler(SIP_IsLocalUri);
 
             LoadData();
+
+            this.start();
         }
 
         #region method InitUI
@@ -679,48 +681,18 @@ namespace SIP_Proxy_demo
             }
             else if (e.ClickedItem.Tag.ToString() == "start")
             {
-                m_pServerToolbar.Items[0].Enabled = false;
-                m_pServerToolbar.Items[1].Enabled = true;
-
-                m_pSipStack.Realm = m_pTabSettings_HostName.Text;
-                m_pSipStack.MinimumExpireTime = 30;
-                IPBindInfo[] bindInfo = new IPBindInfo[]{
-                    new IPBindInfo(m_pSipStack.Realm,BindInfoProtocol.UDP,IPAddress.Any,(int)m_pTabSettings_Port.Value),
-                    new IPBindInfo(m_pSipStack.Realm,BindInfoProtocol.TCP,IPAddress.Any,(int)m_pTabSettings_Port.Value)
-                };
-                m_pSipStack.BindInfo = bindInfo;
-                if (m_pTabSettings_ProxyType.SelectedItem.ToString() == "Statefull")
-                {
-                    m_pSipProxy.ProxyMode = SIP_ProxyMode.Registrar | SIP_ProxyMode.Statefull;
-                }
-                else if (m_pTabSettings_ProxyType.SelectedItem.ToString() == "Stateless")
-                {
-                    m_pSipProxy.ProxyMode = SIP_ProxyMode.Registrar | SIP_ProxyMode.Stateless;
-                }
-                else if (m_pTabSettings_ProxyType.SelectedItem.ToString() == "B2BUA")
-                {
-                    m_pSipProxy.ProxyMode = SIP_ProxyMode.Registrar | SIP_ProxyMode.B2BUA;
-                }
-                if (m_pTabSettings_ForkMode.SelectedItem.ToString() == "None")
-                {
-                    m_pSipProxy.ForkingMode = SIP_ForkingMode.None;
-                }
-                else if (m_pTabSettings_ForkMode.SelectedItem.ToString() == "Parallel")
-                {
-                    m_pSipProxy.ForkingMode = SIP_ForkingMode.Parallel;
-                }
-                else if (m_pTabSettings_ForkMode.SelectedItem.ToString() == "Sequential")
-                {
-                    m_pSipProxy.ForkingMode = SIP_ForkingMode.Sequential;
-                }
-                m_pSipStack.Start();
+                this.start();
             }
             else if (e.ClickedItem.Tag.ToString() == "stop")
             {
                 m_pServerToolbar.Items[0].Enabled = true;
                 m_pServerToolbar.Items[1].Enabled = false;
-
-                m_pSipStack.Stop();
+    
+                if (m_pDebugFrom != null)
+                {
+                    m_pDebugFrom.Close();
+                }
+                m_pSipProxy.Dispose();
             }
         }
 
@@ -759,6 +731,47 @@ namespace SIP_Proxy_demo
 
         #endregion
 
+        #region method start
+        private void start()
+        {
+            m_pServerToolbar.Items[0].Enabled = false;
+            m_pServerToolbar.Items[1].Enabled = true;
+
+            m_pSipStack.Realm = m_pTabSettings_HostName.Text;
+            m_pSipStack.MinimumExpireTime = 30;
+            IPBindInfo[] bindInfo = new IPBindInfo[]{
+                    new IPBindInfo(m_pSipStack.Realm,BindInfoProtocol.UDP,IPAddress.Any,(int)m_pTabSettings_Port.Value),
+                    new IPBindInfo(m_pSipStack.Realm,BindInfoProtocol.TCP,IPAddress.Any,(int)m_pTabSettings_Port.Value)
+                };
+            m_pSipStack.BindInfo = bindInfo;
+            if (m_pTabSettings_ProxyType.SelectedItem.ToString() == "Statefull")
+            {
+                m_pSipProxy.ProxyMode = SIP_ProxyMode.Registrar | SIP_ProxyMode.Statefull;
+            }
+            else if (m_pTabSettings_ProxyType.SelectedItem.ToString() == "Stateless")
+            {
+                m_pSipProxy.ProxyMode = SIP_ProxyMode.Registrar | SIP_ProxyMode.Stateless;
+            }
+            else if (m_pTabSettings_ProxyType.SelectedItem.ToString() == "B2BUA")
+            {
+                m_pSipProxy.ProxyMode = SIP_ProxyMode.Registrar | SIP_ProxyMode.B2BUA;
+            }
+            if (m_pTabSettings_ForkMode.SelectedItem.ToString() == "None")
+            {
+                m_pSipProxy.ForkingMode = SIP_ForkingMode.None;
+            }
+            else if (m_pTabSettings_ForkMode.SelectedItem.ToString() == "Parallel")
+            {
+                m_pSipProxy.ForkingMode = SIP_ForkingMode.Parallel;
+            }
+            else if (m_pTabSettings_ForkMode.SelectedItem.ToString() == "Sequential")
+            {
+                m_pSipProxy.ForkingMode = SIP_ForkingMode.Sequential;
+            }
+            m_pSipStack.Start();
+        }
+
+        #endregion
 
         #region method m_pShutDown_Click
 

@@ -5,7 +5,7 @@ VisualStudioVersion = 12.0.30110.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SIP_Proxy_demo", "SIP_Proxy_demo\SIP_Proxy_demo.csproj", "{92649B8F-4699-42B4-8391-36DC1A7CB28E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Net", "..\..\..\..\Desktop\Net\Net\Net.csproj", "{7AB36CCF-5FFD-4780-A54E-A102ECA028B5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Net", "..\Net\Net\Net.csproj", "{7AB36CCF-5FFD-4780-A54E-A102ECA028B5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

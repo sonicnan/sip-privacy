@@ -51,9 +51,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="LumiSoft.Net, Version=2.0.4013.18921, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="LumiSoft.Net, Version=2.0.5197.33368, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\Desktop\Net\Net\bin\Debug\LumiSoft.Net.dll</HintPath>
+      <HintPath>..\..\Net\Net\bin\Debug\LumiSoft.Net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
@@ -74,7 +74,6 @@
   <ItemGroup>
     <Compile Include="Account.cs" />
     <Compile Include="DataUtils.cs" />
-    <Compile Include="SIP_CallState.cs" />
     <Compile Include="UI\HtmlRichTextBox.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -110,9 +109,6 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="UI\wctrl_ConferenceCall.cs" />
-    <Compile Include="UI\wctrl_DTMF.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
     <Compile Include="UI\wfrm_Contact.cs">
       <SubType>Form</SubType>
     </Compile>
