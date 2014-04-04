@@ -44,7 +44,7 @@ namespace LumiSoft.Net.SIP.Message
                 if(r.StartsWith(",")){
                     r.ReadSpecifiedLength(1);
                 }
-
+                
                 // Allow xxx-param to pasre 1 value from reader.
                 T param = new T();
                 param.Parse(r);

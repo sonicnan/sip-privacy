@@ -303,6 +303,7 @@ namespace LumiSoft.Net.SIP.Proxy
                 4. Forward the request (Section 16.6)
             */
 
+            
             #region 1. Validate the request (Section 16.3)
 
             // 1.1 Reasonable Syntax.
@@ -359,7 +360,6 @@ namespace LumiSoft.Net.SIP.Proxy
             }
 
             #endregion
-
             #region 2. Preprocess routing information (Section 16.4).
 
             /*
@@ -579,7 +579,7 @@ namespace LumiSoft.Net.SIP.Proxy
             }
 
             #endregion
-
+            
             #region 4. Forward the request (Section 16.6)
 
             #region Statefull
@@ -631,7 +631,8 @@ namespace LumiSoft.Net.SIP.Proxy
                 SIP_Request forwardRequest = request.Copy();
 
                 #endregion
-
+                
+                
                 #region 2.  Update the Request-URI
 
                 forwardRequest.RequestLine.Uri = requestContext.Targets[0].TargetUri;

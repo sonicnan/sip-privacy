@@ -17183,11 +17183,12 @@
             </summary>
             <exception cref="T:System.ObjectDisposedException">Is raised when this class is Disposed and this method is accessed.</exception>
         </member>
-        <member name="M:LumiSoft.Net.SIP.Stack.SIP_Dialog.CreateRequest(System.String)">
+        <member name="M:LumiSoft.Net.SIP.Stack.SIP_Dialog.CreateRequest(System.String,System.Boolean)">
             <summary>
             Creates new SIP request using this dialog info.
             </summary>
             <param name="method">SIP method.</param>
+            <param name="incoming">incoming.</param>
             <exception cref="T:System.ObjectDisposedException">Is raised when this class is Disposed and this method is accessed.</exception>
             <exception cref="T:System.ArgumentNullException">Is raised when <b>method</b> is null reference.</exception>
             <exception cref="T:System.ArgumentException">Is raised when any of the arguments has invalid value.</exception>

@@ -16,7 +16,7 @@ namespace LumiSoft.Net.SIP.Message
         /// Default constructor.
         /// </summary>
         public SIP_t_AddressParam()
-        {            
+        {
         }
 
         /// <summary>
@@ -57,14 +57,21 @@ namespace LumiSoft.Net.SIP.Message
             if(reader == null){
                 throw new ArgumentNullException("reader");
             }
-    
+
+
+            if(reader.StartsWith("<"))
+            {
+                reader = new StringReader(reader.ReadParenthesized());
+            }
+
+            string word = reader.QuotedReadToDelimiter(new char[] { ';', ',' }, false);
+            
             // Parse address
-            SIP_t_NameAddress address = new SIP_t_NameAddress();
-            address.Parse(reader);
-            m_pAddress = address;
+            m_pAddress = new SIP_t_NameAddress();
+            m_pAddress.Parse(word);
 
             // Parse parameters.
-            ParseParameters(reader);
+            this.ParseParameters(reader);
         }
 
         #endregion
@@ -78,9 +85,10 @@ namespace LumiSoft.Net.SIP.Message
         public override string ToStringValue()
         {            
             StringBuilder retVal = new StringBuilder();
-            
+
+
             // Add address
-            retVal.Append(m_pAddress.ToStringValue());
+            retVal.Append("<" + new StringReader(m_pAddress.ToStringValue()).ReadParenthesized());
 
             // Add parameters
             foreach(SIP_Parameter parameter in this.Parameters){
@@ -91,6 +99,7 @@ namespace LumiSoft.Net.SIP.Message
                     retVal.Append(";" + parameter.Name);
                 }
             }
+            retVal.Append(">");
 
             return retVal.ToString();
         }

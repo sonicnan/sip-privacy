@@ -167,7 +167,7 @@ namespace LumiSoft.Net.SIP.Stack
                     if((this.State == SIP_DialogState.Early && m_pActiveInvite is SIP_ClientTransaction) || this.State == SIP_DialogState.Confirmed){
                         this.SetState(SIP_DialogState.Terminating,true);
 
-                        SIP_Request bye = CreateRequest(SIP_Methods.BYE);
+                        SIP_Request bye = CreateRequest(SIP_Methods.BYE,true);
                         if(!string.IsNullOrEmpty(reason)){
                             SIP_t_ReasonValue r = new SIP_t_ReasonValue();
                             r.Protocol = "SIP";

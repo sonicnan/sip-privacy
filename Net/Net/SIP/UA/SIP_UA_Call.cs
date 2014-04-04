@@ -30,6 +30,7 @@ namespace LumiSoft.Net.SIP.UA
         private AbsoluteUri               m_pRemoteUri                = null;
         private Dictionary<string,object> m_pTags                     = null;
         private object                    m_pLock                     = "";
+        private bool m_pIncoming = false;
 
         /// <summary>
         /// Default outgoing call constructor.
@@ -80,6 +81,8 @@ namespace LumiSoft.Net.SIP.UA
             m_pInitialInviteTransaction = invite;
             m_pLocalUri  = invite.Request.To.Address.Uri;
             m_pRemoteUri = invite.Request.From.Address.Uri;
+            m_pIncoming = true;
+
             m_pInitialInviteTransaction.Canceled += new EventHandler(delegate(object sender,EventArgs e){
                 // If transaction canceled, terminate call.
                 SetState(SIP_UA_CallState.Terminated);
@@ -430,7 +433,7 @@ namespace LumiSoft.Net.SIP.UA
                     SetState(SIP_UA_CallState.Terminated);
                 }
                 else if(m_State == SIP_UA_CallState.Active){
-                    SIP_Request bye = m_pDialog.CreateRequest(SIP_Methods.BYE);
+                    SIP_Request bye = m_pDialog.CreateRequest(SIP_Methods.BYE,m_pIncoming);
                     if (!string.IsNullOrEmpty(reason))
                     {
                         SIP_t_ReasonValue r = new SIP_t_ReasonValue();
@@ -444,9 +447,13 @@ namespace LumiSoft.Net.SIP.UA
                     sender.Completed += delegate(object s, EventArgs a)
                     {
                         SetState(SIP_UA_CallState.Terminated);
+                        if (m_pDialog != null)
+                        {
+                            m_pDialog.Terminate();
+                        }
                     };
                     sender.Start();
-                    m_pDialog.Terminate();
+                    
 
                 }
                 else if(m_pInitialInviteSender != null){

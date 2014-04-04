@@ -253,11 +253,12 @@ namespace LumiSoft.Net.SIP.Stack
         /// Creates new SIP request using this dialog info.
         /// </summary>
         /// <param name="method">SIP method.</param>
+        /// <param name="incoming">incoming.</param>
         /// <exception cref="ObjectDisposedException">Is raised when this class is Disposed and this method is accessed.</exception>
         /// <exception cref="ArgumentNullException">Is raised when <b>method</b> is null reference.</exception>
         /// <exception cref="ArgumentException">Is raised when any of the arguments has invalid value.</exception>
         /// <returns>Returns created request.</returns>
-        public SIP_Request CreateRequest(string method)
+        public SIP_Request CreateRequest(string method,bool incoming)
         {
             if(this.State == SIP_DialogState.Disposed){
                 throw new ObjectDisposedException(this.GetType().Name);
@@ -364,21 +365,43 @@ namespace LumiSoft.Net.SIP.Stack
                 if(m_pRouteSet.Length == 0){
                     request.RequestLine.Uri = m_pRemoteTarget;
                 }
-                else{  
-                    SIP_Uri topmostRoute = ((SIP_Uri)m_pRouteSet[0].Address.Uri);
+                else{
+                    
+                    SIP_Uri topmostRoute = (SIP_Uri)AbsoluteUri.Parse(new StringReader(m_pRouteSet[0].ToStringValue()).ReadParenthesized());
                     if(topmostRoute.Param_Lr){
                         //sonicnan
                         //request.RequestLine.Uri = m_pRemoteTarget;
-                        for (int i = 0; i < m_pRouteSet.Length; i++)
+                        if (incoming)
                         {
-                            request.Route.Add(m_pRouteSet[i].ToStringValue());
+                            for (int i = 0; i < m_pRouteSet.Length; i++)
+                            {
+                                request.Route.Add(m_pRouteSet[i].ToStringValue());
+                            }
                         }
+                        else
+                        {
+                            for (int i = m_pRouteSet.Length-1; i >=0 ; i--)
+                            {
+                                request.Route.Add(m_pRouteSet[i].ToStringValue());
+                            }
+                        }
+                        
                     }
                     else{
                         request.RequestLine.Uri = SIP_Utils.UriToRequestUri(topmostRoute);
-                        for (int i = 0; i < m_pRouteSet.Length; i++)
+                        if (incoming)
                         {
-                            request.Route.Add(m_pRouteSet[i].ToStringValue());
+                            for (int i = 0; i < m_pRouteSet.Length; i++)
+                            {
+                                request.Route.Add(m_pRouteSet[i].ToStringValue());
+                            }
+                        }
+                        else
+                        {
+                            for (int i = m_pRouteSet.Length - 1; i >= 0; i--)
+                            {
+                                request.Route.Add(m_pRouteSet[i].ToStringValue());
+                            }
                         }
                     }
                 }

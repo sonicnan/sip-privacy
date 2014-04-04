@@ -857,6 +857,11 @@ namespace LumiSoft.SIP.UA.UI
                         
             #region Get NAT handling methods
 
+            ToolStripMenuItem item_no_nat = new ToolStripMenuItem("No NAT handling");
+            item_no_nat.Name = "no_nat";
+            ((ToolStripDropDownButton)m_pToolbar.Items["nat"]).DropDownItems.Add(item_no_nat);
+
+
             m_pUPnP = new UPnP_NAT_Client();
 
             STUN_Result stunResult = new STUN_Result(STUN_NetType.UdpBlocked,null);
@@ -894,10 +899,7 @@ namespace LumiSoft.SIP.UA.UI
             //    MessageBox.Show("Calling may not possible, your firewall or router blocks STUN and doesn't support UPnP.\r\n\r\nSTUN Net Type: " + stunResult.NetType + "\r\n\r\nUPnP Supported: " + m_pUPnP.IsSupported,"Error:",MessageBoxButtons.OK,MessageBoxIcon.Error);
             //}
 
-            ToolStripMenuItem item_no_nat = new ToolStripMenuItem("No NAT handling");
-            item_no_nat.Name = "no_nat";
-            ((ToolStripDropDownButton)m_pToolbar.Items["nat"]).DropDownItems.Add(item_no_nat);
-
+            
             // Select first enabled item.
             foreach(ToolStripItem it in ((ToolStripDropDownButton)m_pToolbar.Items["nat"]).DropDownItems){
                 if(it.Enabled){

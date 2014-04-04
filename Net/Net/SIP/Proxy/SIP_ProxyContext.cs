@@ -139,7 +139,7 @@ namespace LumiSoft.Net.SIP.Proxy
                 m_pRequest.MaxForwards--;
 
                 #endregion
-                                
+
                 #region 5. Optionally add additional header fields.
 
                 // 5. Optionally add additional header fields.
@@ -159,7 +159,11 @@ namespace LumiSoft.Net.SIP.Proxy
                         - The proxy MUST then place the first Route header field value
                           into the Request-URI and remove that value from the Route header field.
                 */
-                if(m_pRequest.Route.GetAllValues().Length > 0 && !m_pRequest.Route.GetTopMostValue().Parameters.Contains("lr")){
+                
+
+                if(m_pRequest.Route.GetAllValues().Length > 0 && !m_pRequest.Route.GetTopMostValue().Parameters.Contains("lr"))
+                {
+                 
                     m_pRequest.Route.Add(m_pRequest.RequestLine.Uri.ToString());
 
                     m_pRequest.RequestLine.Uri = SIP_Utils.UriToRequestUri(m_pRequest.Route.GetTopMostValue().Address.Uri);
@@ -216,23 +220,27 @@ namespace LumiSoft.Net.SIP.Proxy
                       the target set.  The proxy does not need to place anything in
                       the response context, but otherwise acts as if this element of
                       the target set returned a 408 (Request Timeout) final response.
-                */            
+                */
                 SIP_Uri uri = null;
-                if(isStrictRoute){
+                if (isStrictRoute)
+                {
                     uri = (SIP_Uri)m_pRequest.RequestLine.Uri;
                 }
-                else if(m_pRequest.Route.GetTopMostValue() != null){
+                else if (m_pRequest.Route.GetTopMostValue() != null)
+                {
                     uri = (SIP_Uri)m_pRequest.Route.GetTopMostValue().Address.Uri;
                 }
-                else{
+                else
+                {
                     uri = (SIP_Uri)m_pRequest.RequestLine.Uri;
                 }
-                
+
                 // Queue hops.
-                foreach(SIP_Hop hop in m_pOwner.Proxy.Stack.GetHops(uri,m_pRequest.ToByteData().Length,((SIP_Uri)m_pRequest.RequestLine.Uri).IsSecure)){
+                foreach (SIP_Hop hop in m_pOwner.Proxy.Stack.GetHops(uri, m_pRequest.ToByteData().Length, ((SIP_Uri)m_pRequest.RequestLine.Uri).IsSecure))
+                {
                     m_pHops.Enqueue(hop);
                 }
-                
+
                 #endregion
 
                 #region 4. Optionally add a Record-route header field value.
@@ -251,16 +259,19 @@ namespace LumiSoft.Net.SIP.Proxy
                     processing of bullet 6), MUST insert a Record-Route header field that 
                     is not a SIPS URI.
                 */
-                
+
                 // NOTE: ACK don't add Record-route header.
-                if(m_pHops.Count > 0 && m_AddRecordRoute && m_pRequest.RequestLine.Method != SIP_Methods.ACK){
+                if (m_pHops.Count > 0 && m_AddRecordRoute && m_pRequest.RequestLine.Method != SIP_Methods.ACK)
+                {
                     string recordRoute = m_pOwner.Proxy.Stack.TransportLayer.GetRecordRoute(m_pHops.Peek().Transport);
-                    if(recordRoute != null){
+                    if (recordRoute != null)
+                    {
                         m_pRequest.RecordRoute.Add(recordRoute);
                     }
                 }
 
                 #endregion
+
 
             }
 
