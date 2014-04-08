@@ -1,0 +1,109 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+using LumiSoft.Net.RTP;
+using LumiSoft.Net.Media;
+using LumiSoft.Net.Media.Codec;
+using LumiSoft.Net.Media.Codec.Audio;
+
+namespace LumiSoft.SIP.UA
+{
+    /// <summary>
+    /// This class implements RTP audio player.
+    /// </summary>
+    public class RTP_AudioPlayer
+    {
+        private AudioOutDevice    m_pOutputDevice = null;
+        private RTP_Session       m_pSession      = null;
+        private RTP_ReceiveStream m_pRtpStream    = null;
+        private AudioOut          m_pPlayer       = null;
+
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        /// <param name="device">Audio output device.</param>
+        /// <param name="session">RTP session.</param>
+        /// <exception cref="ArgumentNullException">Is raised when <b>device</b> or <b>session</b> is null reference.</exception>
+        public RTP_AudioPlayer(AudioOutDevice device,RTP_Session session)
+        {
+            if(device == null){
+                throw new ArgumentNullException("device");
+            }
+            if(session == null){
+                throw new ArgumentNullException("session");
+            }
+
+            m_pOutputDevice = device;
+            m_pSession      = session;
+
+            m_pSession.NewReceiveStream += new EventHandler<RTP_ReceiveStreamEventArgs>(delegate(object sender,RTP_ReceiveStreamEventArgs e){
+                // Release old audio stream.
+                if(m_pRtpStream != null){
+                    m_pRtpStream.PacketReceived -= new EventHandler<RTP_PacketEventArgs>(m_pRtpStream_PacketReceived);
+                    m_pRtpStream = null;
+                }
+
+                // Attach new audio stream.
+                m_pRtpStream = e.Stream;
+                m_pRtpStream.PacketReceived += new EventHandler<RTP_PacketEventArgs>(m_pRtpStream_PacketReceived);
+            });
+
+            m_pPlayer = new AudioOut(device,8000,16,1);
+        }
+
+        #region method Dispose
+
+        /// <summary>
+        /// Cleans up any resources being used.
+        /// </summary>
+        public void Dispose()
+        {
+            m_pRtpStream.PacketReceived -= new EventHandler<RTP_PacketEventArgs>(m_pRtpStream_PacketReceived);
+            m_pRtpStream = null;
+            
+            m_pPlayer.Dispose();
+            m_pPlayer = null;
+        }
+
+        #endregion
+
+
+        #region Events handling
+
+        #region method m_pRtpStream_PacketReceived
+
+        /// <summary>
+        /// This method is called when new RTP packet received.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">Event data.</param>
+        private void m_pRtpStream_PacketReceived(object sender,RTP_PacketEventArgs e)
+        {
+            try{
+                Codec codec = null;
+                m_pSession.Payloads.TryGetValue(e.Packet.PayloadType,out codec);
+                if(codec != null){
+                    byte[] decodedData = codec.Decode(e.Packet.Data,0,e.Packet.Data.Length);
+                    m_pPlayer.Write(decodedData,0,decodedData.Length);
+                }
+                // Unknown RTP payload.
+                //else{
+            }
+            catch{
+                // Decoding or player error, skip it.
+            }
+        }
+
+        #endregion
+
+        #endregion
+
+
+        #region Properties implementation
+
+
+        #endregion
+    }
+}

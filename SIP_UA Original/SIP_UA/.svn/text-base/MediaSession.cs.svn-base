@@ -1,0 +1,82 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+using LumiSoft.Net.RTP;
+
+namespace LumiSoft.SIP.UA
+{
+    /// <summary>
+    /// This class represent INVITE media session.
+    /// </summary>
+    public class MediaSession
+    {
+        private long                  m_LocalSdpVersion  = 0;
+        private long                  m_RemoteSdpVersion = 0;
+        private string                m_LocalHost        = "";
+        private List<MediaStream>     m_pStreams         = null;
+        private RTP_MultimediaSession m_pRtp             = null;
+
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        public MediaSession()
+        {
+            m_pStreams = new List<MediaStream>();
+        }
+
+
+        #region Properties implementation
+
+        /// <summary>
+        /// Gets or sets local SDP version.
+        /// </summary>
+        public long LocalSdpVersion
+        {
+            get{ return m_LocalSdpVersion; }
+
+            set{ m_LocalSdpVersion = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets remote SDP version.
+        /// </summary>
+        public long RemoteSdpVersion
+        {
+            get{ return m_RemoteSdpVersion; }
+
+            set{ m_RemoteSdpVersion = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets local host name or IP.
+        /// </summary>
+        public string LocalHost
+        {
+            get{ return m_LocalHost; }
+
+            set{ m_LocalHost = value; }
+        }
+
+        /// <summary>
+        /// Gets media streams.
+        /// </summary>
+        public List<MediaStream> MediaStreams
+        {
+            get{ return m_pStreams; }
+        }
+
+        /// <summary>
+        /// Gets or sets RTP multimedia session.
+        /// </summary>
+        public RTP_MultimediaSession RTP
+        {
+            get{ return m_pRtp; }
+
+            set{ m_pRtp = value; }
+        }
+
+        #endregion
+    }
+}
