@@ -252,6 +252,12 @@ namespace LumiSoft.SIP.UA.UI
             invite.ContentType = "application/sdp";
             invite.Data        = sdpOffer.ToByte();
 
+            this.BeginInvoke(new MethodInvoker(delegate()
+            {
+                m_pDisplayName.Text = to.Uri.ToString();
+
+            }));
+
             m_pUACall = m_pUA.CreateCall(invite);
             m_pUACall.Start();
 
@@ -261,11 +267,9 @@ namespace LumiSoft.SIP.UA.UI
                 m_pUACall.StateChanged += new EventHandler(m_pCall_StateChanged);
                 m_pStatusText.Text = "Calling";
                 m_pDuration.Text = "00:00:00";
-                m_pDisplayName.Text = to.Uri.ToString();
                 m_pHangup.Enabled = false;
 
             }));
-
         }
                 
         #endregion

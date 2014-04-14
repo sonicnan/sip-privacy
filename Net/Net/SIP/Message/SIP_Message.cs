@@ -1323,6 +1323,71 @@ namespace LumiSoft.Net.SIP.Message
         }
 
         /// <summary>
+        /// Gets or sets DiffieHellman.
+        /// </summary>
+        public SIP_t_DiffieHellman DiffieHellman
+        {
+            get{
+                SIP_HeaderField h = m_pHeader.GetFirst("Diffie-Hellman:");
+                if(h != null){
+                    return ((SIP_SingleValueHF<SIP_t_DiffieHellman>)h).ValueX;
+                }
+                else{
+                    return null; 
+                }
+            }
+
+            set{
+                if(value == null){
+                    m_pHeader.RemoveFirst("Diffie-Hellman:");
+                }
+                else{
+                    if(m_pHeader.GetFirst("Diffie-Hellman:") != null)
+                    {
+                        m_pHeader.RemoveFirst("Diffie-Hellman:");
+                    }
+                    m_pHeader.Add(new SIP_SingleValueHF<SIP_t_DiffieHellman>("Diffie-Hellman:", value));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets Hash.
+        /// </summary>
+        public SIP_t_Hash Hash
+        {
+            get
+            {
+                SIP_HeaderField h = m_pHeader.GetFirst("Hash:");
+                if (h != null)
+                {
+                    return ((SIP_SingleValueHF<SIP_t_Hash>)h).ValueX;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+
+            set
+            {
+                if (value == null)
+                {
+                    m_pHeader.RemoveFirst("Hash:");
+                }
+                else
+                {
+                    if (m_pHeader.GetFirst("Hash:") != null)
+                    {
+                        m_pHeader.RemoveFirst("Hash:");
+                    }
+                    m_pHeader.Add(new SIP_SingleValueHF<SIP_t_Hash>("Hash:", value));
+                }
+            }
+        }
+
+
+        /// <summary>
         /// Gets or sets content data.
         /// </summary>
         public byte[] Data

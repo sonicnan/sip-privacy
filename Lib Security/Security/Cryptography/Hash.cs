@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Security.Cryptography;
+using System.Web;
 
 namespace Security.Cryptography
 {
@@ -42,7 +43,8 @@ namespace Security.Cryptography
                     break;
             }
             byte[] hashBytes = hash.ComputeHash(Encoding.Default.GetBytes(plainText));
-            string ret = "";
+            string ret = HttpServerUtility.UrlTokenEncode(hashBytes);
+            /*
             foreach (byte a in hashBytes)
             {
                 if (a < 16)
@@ -50,6 +52,7 @@ namespace Security.Cryptography
                 else
                     ret += a.ToString("x");
             }
+             */
             return ret;
         }
     }

@@ -1929,6 +1929,147 @@
             Gets first unseen message sequence number.
             </summary>
         </member>
+        <member name="T:LumiSoft.Net.SIP.Message.SIP_t_DiffieHellman">
+            <summary>
+            Implements SIP "DiffieHellman" value.
+            </summary>
+            <remarks>
+            <code>
+                DiffieHellman = word
+            </code>
+            </remarks>
+        </member>
+        <member name="T:LumiSoft.Net.SIP.Message.SIP_t_Value">
+            <summary>
+            This base class for all SIP data types.
+            </summary>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_Value.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_Value.Parse(LumiSoft.Net.StringReader)">
+            <summary>
+            Parses single value from specified reader.
+            </summary>
+            <param name="reader">Reader what contains </param>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_Value.ToStringValue">
+            <summary>
+            Convert this to string value.
+            </summary>
+            <returns>Returns this as string value.</returns>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_DiffieHellman.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_DiffieHellman.#ctor(System.String)">
+            <summary>
+            Default constructor.
+            </summary>
+            <param name="value">SIP_t_DiffieHellman + parameters value.</param>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_DiffieHellman.Parse(System.String)">
+            <summary>
+            Parses "DiffieHellman" from specified value.
+            </summary>
+            <param name="value">SIP "DiffieHellman" value.</param>
+            <exception cref="T:System.ArgumentNullException">Raised when <b>value</b> is null.</exception>
+            <exception cref="T:LumiSoft.Net.SIP.Message.SIP_ParseException">Raised when invalid SIP message.</exception>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_DiffieHellman.Parse(LumiSoft.Net.StringReader)">
+            <summary>
+            Parses "DiffieHellman" from specified reader.
+            </summary>
+            <param name="reader">Reader from where to parse.</param>
+            <exception cref="T:System.ArgumentNullException">Raised when <b>reader</b> is null.</exception>
+            <exception cref="T:LumiSoft.Net.SIP.Message.SIP_ParseException">Raised when invalid SIP message.</exception>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_DiffieHellman.ToStringValue">
+            <summary>
+            Converts this to valid "DiffieHellman" value.
+            </summary>
+            <returns>Returns "DiffieHellman" value.</returns>
+        </member>
+        <member name="P:LumiSoft.Net.SIP.Message.SIP_t_DiffieHellman.Value">
+            <summary>
+            Gets or sets DiffieHellman.
+            </summary>
+        </member>
+        <member name="T:LumiSoft.Net.SIP.Message.SIP_t_Hash">
+            <summary>
+            Implements SIP_t_Hash + parameters value.
+            </summary>
+        </member>
+        <member name="T:LumiSoft.Net.SIP.Message.SIP_t_ValueWithParams">
+            <summary>
+            This base class for SIP data types what has parameters support.
+            </summary>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_ValueWithParams.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_ValueWithParams.ParseParameters(LumiSoft.Net.StringReader)">
+            <summary>
+            Parses parameters from specified reader. Reader position must be where parameters begin.
+            </summary>
+            <param name="reader">Reader from where to read parameters.</param>
+            <exception cref="T:LumiSoft.Net.SIP.Message.SIP_ParseException">Raised when invalid SIP message.</exception>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_ValueWithParams.ParametersToString">
+            <summary>
+            Convert parameters to valid parameters string.
+            </summary>
+            <returns>Returns parameters string.</returns>
+        </member>
+        <member name="P:LumiSoft.Net.SIP.Message.SIP_t_ValueWithParams.Parameters">
+            <summary>
+            Gets via parameters.
+            </summary>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_Hash.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_Hash.#ctor(System.String)">
+            <summary>
+            Default constructor.
+            </summary>
+            <param name="value">SIP_t_NameAddress + parameters value.</param>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_Hash.Parse(System.String)">
+            <summary>
+            Parses this from specified value.
+            </summary>
+            <param name="value">Hash + params value.</param>
+            <exception cref="T:System.ArgumentNullException">Raised when <b>value</b> is null.</exception>
+            <exception cref="T:LumiSoft.Net.SIP.Message.SIP_ParseException">Raised when invalid SIP message.</exception>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_Hash.Parse(LumiSoft.Net.StringReader)">
+            <summary>
+            Parses this from Hash param string.
+            </summary>
+            <param name="reader">Reader what contains Hash param string.</param>
+            <exception cref="T:System.ArgumentNullException">Raised when <b>reader</b> is null.</exception>
+            <exception cref="T:LumiSoft.Net.SIP.Message.SIP_ParseException">Raised when invalid SIP message.</exception>
+        </member>
+        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_Hash.ToStringValue">
+            <summary>
+            Converts this to valid value string.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:LumiSoft.Net.SIP.Message.SIP_t_Hash.Value">
+            <summary>
+            Gets or sets Hash.
+            </summary>
+        </member>
         <member name="T:LumiSoft.Net.IMAP.IMAP_Fetch_DataItem_X_GM_MSGID">
             <summary>
             This class represents GMail X-GM-MSGID data item. Defined in <see href="http://code.google.com/intl/et/apis/gmail/imap">GMail API</see>.
@@ -38383,56 +38524,6 @@
             </code>
             </remarks>
         </member>
-        <member name="T:LumiSoft.Net.SIP.Message.SIP_t_ValueWithParams">
-            <summary>
-            This base class for SIP data types what has parameters support.
-            </summary>
-        </member>
-        <member name="T:LumiSoft.Net.SIP.Message.SIP_t_Value">
-            <summary>
-            This base class for all SIP data types.
-            </summary>
-        </member>
-        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_Value.#ctor">
-            <summary>
-            Default constructor.
-            </summary>
-        </member>
-        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_Value.Parse(LumiSoft.Net.StringReader)">
-            <summary>
-            Parses single value from specified reader.
-            </summary>
-            <param name="reader">Reader what contains </param>
-        </member>
-        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_Value.ToStringValue">
-            <summary>
-            Convert this to string value.
-            </summary>
-            <returns>Returns this as string value.</returns>
-        </member>
-        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_ValueWithParams.#ctor">
-            <summary>
-            Default constructor.
-            </summary>
-        </member>
-        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_ValueWithParams.ParseParameters(LumiSoft.Net.StringReader)">
-            <summary>
-            Parses parameters from specified reader. Reader position must be where parameters begin.
-            </summary>
-            <param name="reader">Reader from where to read parameters.</param>
-            <exception cref="T:LumiSoft.Net.SIP.Message.SIP_ParseException">Raised when invalid SIP message.</exception>
-        </member>
-        <member name="M:LumiSoft.Net.SIP.Message.SIP_t_ValueWithParams.ParametersToString">
-            <summary>
-            Convert parameters to valid parameters string.
-            </summary>
-            <returns>Returns parameters string.</returns>
-        </member>
-        <member name="P:LumiSoft.Net.SIP.Message.SIP_t_ValueWithParams.Parameters">
-            <summary>
-            Gets via parameters.
-            </summary>
-        </member>
         <member name="M:LumiSoft.Net.SIP.Message.SIP_t_ACValue.#ctor">
             <summary>
             Default constructor.
@@ -43099,6 +43190,16 @@
         <member name="P:LumiSoft.Net.SIP.Message.SIP_Message.WWWAuthenticate">
             <summary>
             Gets or authentication challenge.
+            </summary>
+        </member>
+        <member name="P:LumiSoft.Net.SIP.Message.SIP_Message.DiffieHellman">
+            <summary>
+            Gets or sets DiffieHellman.
+            </summary>
+        </member>
+        <member name="P:LumiSoft.Net.SIP.Message.SIP_Message.Hash">
+            <summary>
+            Gets or sets Hash.
             </summary>
         </member>
         <member name="P:LumiSoft.Net.SIP.Message.SIP_Message.Data">

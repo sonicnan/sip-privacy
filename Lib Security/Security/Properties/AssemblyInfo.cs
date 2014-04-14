@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("Security")]
 [assembly: AssemblyDescription("Cryptography")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("MUT")]
+[assembly: AssemblyCompany("Security")]
 [assembly: AssemblyProduct("Security")]
 [assembly: AssemblyCopyright("Copyright ©  2014")]
 [assembly: AssemblyTrademark("")]

@@ -23,7 +23,7 @@ namespace Nickname
             string outputname = "";
             try
             {
-                Nickname agedTwenty = NameList.Where<Nickname>(x => x.nickname == inputname).Single<Nickname>();
+                Nickname agedTwenty = NameList.Where<Nickname>(x => x.nickname.ToLower() == inputname.ToLower()).Single<Nickname>();
                 int index = NameList.IndexOf(agedTwenty);
                 outputname = NameList[index].username;
                 NameList.RemoveAt(index);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Security.Cryptography;
 using System.Linq;
+using System.Web;
 
 namespace Security.Key
 {
@@ -150,14 +151,14 @@ namespace Security.Key
         {
             return representation;
         }
-        public byte[] ToKeyAES()
+        public string ToKeyAES()
         {
-            return Key.Take(32).ToArray();
+            return HttpServerUtility.UrlTokenEncode(Key.Take(32).ToArray());
         }
-        public byte[] ToIVAES()
+        public string ToIVAES()
         {
 
-            return Key.Skip(32).Take(16).ToArray();
+            return HttpServerUtility.UrlTokenEncode(Key.Skip(32).Take(16).ToArray());
         }
 
         #endregion

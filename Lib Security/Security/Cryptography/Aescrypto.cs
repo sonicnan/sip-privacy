@@ -4,13 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Security.Cryptography;
 using System.IO;
+using System.Web;
 
 namespace Security.Cryptography
 {
     public class Aescrypto
     {
 
-        public static byte[] EncryptStringToBytes_Aes(string plainText, byte[] Key, byte[] IV)
+        public static string EncryptStringToBytes_Aes(string plainText, string Key, string IV)
         {
             // Check arguments. 
             if (plainText == null || plainText.Length <= 0)
@@ -18,14 +19,14 @@ namespace Security.Cryptography
             if (Key == null || Key.Length <= 0)
                 throw new ArgumentNullException("Key");
             if (IV == null || IV.Length <= 0)
-                throw new ArgumentNullException("Key");
-            byte[] encrypted;
+                throw new ArgumentNullException("IV");
+            string encrypted;
             // Create an AesCryptoServiceProvider object 
             // with the specified key and IV. 
             using (AesCryptoServiceProvider aesAlg = new AesCryptoServiceProvider())
             {
-                aesAlg.Key = Key;
-                aesAlg.IV = IV;
+                aesAlg.Key = HttpServerUtility.UrlTokenDecode(Key);
+                aesAlg.IV = HttpServerUtility.UrlTokenDecode(IV);
 
                 // Create a decrytor to perform the stream transform.
                 ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
@@ -41,21 +42,21 @@ namespace Security.Cryptography
                             //Write all data to the stream.
                             swEncrypt.Write(plainText);
                         }
-                        encrypted = msEncrypt.ToArray();
+                        encrypted = HttpServerUtility.UrlTokenEncode(msEncrypt.ToArray());
+                       
                     }
                 }
             }
-
 
             // Return the encrypted bytes from the memory stream. 
             return encrypted;
 
         }
 
-        public static string DecryptStringFromBytes_Aes(byte[] cipherText, byte[] Key, byte[] IV)
+        public static string DecryptStringFromBytes_Aes(string cipher, string Key, string IV)
         {
             // Check arguments. 
-            if (cipherText == null || cipherText.Length <= 0)
+            if (cipher == null || cipher.Length <= 0)
                 throw new ArgumentNullException("cipherText");
             if (Key == null || Key.Length <= 0)
                 throw new ArgumentNullException("Key");
@@ -65,13 +66,14 @@ namespace Security.Cryptography
             // Declare the string used to hold 
             // the decrypted text. 
             string plaintext = null;
+            byte[] cipherText = HttpServerUtility.UrlTokenDecode(cipher);
 
             // Create an AesCryptoServiceProvider object 
             // with the specified key and IV. 
             using (AesCryptoServiceProvider aesAlg = new AesCryptoServiceProvider())
             {
-                aesAlg.Key = Key;
-                aesAlg.IV = IV;
+                aesAlg.Key = HttpServerUtility.UrlTokenDecode(Key);
+                aesAlg.IV = HttpServerUtility.UrlTokenDecode(IV);
 
                 // Create a decrytor to perform the stream transform.
                 ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);

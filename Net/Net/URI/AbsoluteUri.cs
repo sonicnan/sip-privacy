@@ -62,7 +62,7 @@ namespace LumiSoft.Net
         /// </summary>
         /// <param name="value">URI string.</param>
         /// <exception cref="ArgumentNullException">Is raised when <b>value</b> is null reference.</exception>
-        protected virtual void ParseInternal(string value)
+        public virtual void ParseInternal(string value)
         {
             if(value == null){
                 throw new ArgumentNullException("value");

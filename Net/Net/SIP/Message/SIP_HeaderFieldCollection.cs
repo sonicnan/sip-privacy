@@ -560,6 +560,14 @@ namespace LumiSoft.Net.SIP.Message
             else if(nameLower == "www-authenticate"){
                 return new SIP_SingleValueHF<SIP_t_Challenge>("WWW-Authenticate:",new SIP_t_Challenge(value));
             }
+            else if (nameLower == "diffie-hellman")
+            {
+                return new SIP_SingleValueHF<SIP_t_DiffieHellman>("Diffie-Hellman:", new SIP_t_DiffieHellman(value));
+            }
+            else if (nameLower == "hash")
+            {
+                return new SIP_SingleValueHF<SIP_t_Hash>("Hash:", new SIP_t_Hash(value));
+            }
             else{
                 return new SIP_HeaderField(name,value);
             }

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Security.Key
 {
@@ -12,44 +13,30 @@ namespace Security.Key
     {
 
         int current = 0;
+        string username = null;
 
         OfflineKeyGenerator genofflinekey = new OfflineKeyGenerator();
         List<Offlinekey> keyList = new List<Offlinekey>();
 
-        string file = AppDomain.CurrentDomain.BaseDirectory + "\\Offlinekey.xml";
+        string subPath = Application.StartupPath + "\\Settings\\Key\\";
+        string file = null;
 
-        public void loadOfflinekey(string kab,string dk)
+        public OfflineKeyServiceProvider(string kab, string dk, string username)
         {
-
+            this.username = username;
+            file = username+".olk";
             
-            DataSet dsOfflinekey = new DataSet("Offlinekey");
-            DataTable dtKeylist = dsOfflinekey.Tables.Add("Keylist");
-            dtKeylist.Columns.Add("Id");
-            dtKeylist.Columns.Add("Key");
 
-            if (File.Exists(file))
+            if (File.Exists(subPath))
             {
-                
-                dsOfflinekey.ReadXml(file);
-
-                foreach (DataRow dr in dtKeylist.Rows)
-                {
-                    keyList.Add(new Offlinekey() { id = GetValueString(dr, "Id"), key = GetValueString(dr, "Key") });
-                }
+                load();
             }
             else 
             {
 
                 keyList = genofflinekey.GenOfflineKey(30, 30, kab, dk);
-                foreach (Offlinekey i in keyList)
-                {
-                    DataRow dr = dtKeylist.NewRow();
-                    dr["Id"] = i.id;
-                    dr["Key"] = i.key;
-                    dtKeylist.Rows.Add(dr);
-                }
 
-                dsOfflinekey.WriteXml(file);
+                save();
             }
 
         }
@@ -60,31 +47,12 @@ namespace Security.Key
             if (current > 14)
             {
 
-                DataSet dsOfflinekey = new DataSet("Offlinekey");
-                DataTable dtKeylist = dsOfflinekey.Tables.Add("Keylist");
-                dtKeylist.Columns.Add("Id");
-                dtKeylist.Columns.Add("Key");
-
-
-
                 keyList.AddRange(genofflinekey.updateOfflineKey(30, 10, keyList));
-               
                 keyList.RemoveRange(0, 10);
-
-                foreach (Offlinekey i in keyList)
-                {
-                    DataRow dr = dtKeylist.NewRow();
-                    dr["Id"] = i.id;
-                    dr["Key"] = i.key;
-                    dtKeylist.Rows.Add(dr);
-                }
-
                 current = 0;
-                dsOfflinekey.WriteXml(file);
 
+                save();
             }
-
-
 
             return keyList[current];
         }
@@ -112,33 +80,17 @@ namespace Security.Key
             }
             catch (InvalidOperationException)
             {
-                Console.WriteLine("Cannot Found\n");
+                throw new Exception("Cannot get Offlinekey");
             }
             
             if (current > 14)
             {
 
-                DataSet dsOfflinekey = new DataSet("Offlinekey");
-                DataTable dtKeylist = dsOfflinekey.Tables.Add("Keylist");
-                dtKeylist.Columns.Add("Id");
-                dtKeylist.Columns.Add("Key");
-
-
                 keyList.AddRange(genofflinekey.updateOfflineKey(30, 10, keyList));
-
                 keyList.RemoveRange(0, 10);
 
-                foreach (Offlinekey i in keyList)
-                {
-                    DataRow dr = dtKeylist.NewRow();
-                    dr["Id"] = i.id;
-                    dr["Key"] = i.key;
-                    dtKeylist.Rows.Add(dr);
-                }
-
-                current = 0;
-                dsOfflinekey.WriteXml(file);
-
+                save();
+                
                 return keyList[current];
             }
             else
@@ -174,6 +126,57 @@ namespace Security.Key
             }
 
             return dr[fieldName];
+        }
+
+        protected void load()
+        {
+            DataSet dsOfflinekey = new DataSet("Offlinekey");
+            dsOfflinekey.ReadXml(subPath + file);
+
+            if (dsOfflinekey.Tables["Setting"].Rows.Count > 0)
+            {
+                DataRow dr = dsOfflinekey.Tables["Setting"].Rows[0];
+                username = dr["Username"].ToString();
+                current = Convert.ToInt16(dr["Current"]);
+            }
+
+            foreach (DataRow dr in dsOfflinekey.Tables["Keylist"].Rows)
+            {
+                keyList.Add(new Offlinekey() { id = GetValueString(dr, "Id"), key = GetValueString(dr, "Key") });
+            }
+        }
+
+        public void save()
+        {
+            DataSet dsOfflinekey = new DataSet("Offlinekey");
+            
+            dsOfflinekey.Tables.Add("Setting");
+            dsOfflinekey.Tables["Setting"].Columns.Add("Username");
+            dsOfflinekey.Tables["Setting"].Columns.Add("Current");
+            dsOfflinekey.Tables.Add("Keylist");
+            dsOfflinekey.Tables["Keylist"].Columns.Add("Id");
+            dsOfflinekey.Tables["Keylist"].Columns.Add("Key");
+
+            DataRow drSipSettings = dsOfflinekey.Tables["Setting"].Rows.Add();
+            drSipSettings["Username"] = username;
+            drSipSettings["Current"] = current;
+
+            foreach (Offlinekey i in keyList)
+            {
+                DataRow dr = dsOfflinekey.Tables["Keylist"].NewRow();
+                dr["Id"] = i.id;
+                dr["Key"] = i.key;
+                dsOfflinekey.Tables["Keylist"].Rows.Add(dr);
+            }
+            if (!Directory.Exists(subPath))
+                Directory.CreateDirectory(subPath);
+
+            dsOfflinekey.WriteXml(subPath + file);
+        }
+
+        public string user
+        {
+            get { return username; }
         }
     }
 }

@@ -6,6 +6,8 @@ using LumiSoft.Net.Media;
 using LumiSoft.Net.SDP;
 using LumiSoft.Net.SIP.Message;
 using LumiSoft.Net.SIP.Stack;
+using Security.Key;
+using Security.Cryptography;
 
 namespace LumiSoft.Net.SIP.UA
 {
@@ -237,6 +239,24 @@ namespace LumiSoft.Net.SIP.UA
         /// <exception cref="InvalidOperationException">Is raised when call is not in valid state.</exception>
         public void Start()
         {
+            SIP_Uri m_from = new SIP_Uri();
+            m_from.ParseInternal(m_pInvite.From.Address.Uri.ToString());
+            OfflineKeyServiceProvider m_offlinekey = new OfflineKeyServiceProvider(m_from.User, m_from.Address, m_from.User);
+
+            SIP_Uri m_to =  new SIP_Uri();
+            m_to.ParseInternal(m_pInvite.To.Address.Uri.ToString());
+            RSAcrypto m_publickey = new RSAcrypto();
+            m_publickey.LoadPublicFromXml(m_to.Host);
+            m_to.User = RSAcrypto.PublicEncryption(m_to.User, m_publickey.publickey);
+            m_pInvite.To.Parse(m_to.ToString());
+
+            DiffieHellman server = new DiffieHellman(384).GenerateRequest();
+            m_pInvite.DiffieHellman = new SIP_t_DiffieHellman(server.ToString());
+
+            Offlinekey offkey = m_offlinekey.getOfflinekey();
+            string m_hmac = Hmac.sign(server.ToString(),offkey.key);
+            m_pInvite.Hash = new SIP_t_Hash(m_hmac + ";tag=" + offkey.id);
+
             lock(m_pLock){
                 if(m_State == SIP_UA_CallState.Disposed){
                     throw new ObjectDisposedException(this.GetType().Name);

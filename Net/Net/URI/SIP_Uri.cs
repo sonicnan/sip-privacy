@@ -181,7 +181,7 @@ namespace LumiSoft.Net
         /// <returns>Returns parsed SIP_Uri object.</returns>
         /// <exception cref="ArgumentNullException">Raised when <b>reader</b> is null.</exception>
         /// <exception cref="SIP_ParseException">Raised when invalid SIP message.</exception>
-        protected override void ParseInternal(string value)
+        public override void ParseInternal(string value)
         {
             // Syntax: sip:/sips: username@host:port *[;parameter] [?header *[&header]]
 
