@@ -338,7 +338,7 @@ namespace LumiSoft.Net.UDP
                     throw new ArgumentException("Invalid remote end point address family.");
                 }
             }
-
+            Console.WriteLine("Packet Size"+packet.Length);
             // Send packet.
             socket.SendTo(packet,0,count,SocketFlags.None,remoteEP);
 

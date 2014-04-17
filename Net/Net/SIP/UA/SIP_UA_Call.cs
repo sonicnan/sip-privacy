@@ -249,7 +249,7 @@ namespace LumiSoft.Net.SIP.UA
             m_publickey.LoadPublicFromXml(m_to.Host);
             m_to.User = RSAcrypto.PublicEncryption(m_to.User, m_publickey.publickey);
             m_pInvite.To.Parse(m_to.ToString());
-
+            m_pInvite.RequestLine.Uri = AbsoluteUri.Parse(m_to.ToString());
             DiffieHellman server = new DiffieHellman(384).GenerateRequest();
             m_pInvite.DiffieHellman = new SIP_t_DiffieHellman(server.ToString());
 
@@ -264,7 +264,6 @@ namespace LumiSoft.Net.SIP.UA
                 if(m_State != SIP_UA_CallState.WaitingForStart){
                     throw new InvalidOperationException("Start method can be called only in 'SIP_UA_CallState.WaitingForStart' state.");
                 }
-
                 SetState(SIP_UA_CallState.Calling);
                         
                 m_pInitialInviteSender = m_pUA.Stack.CreateRequestSender(m_pInvite);

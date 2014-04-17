@@ -1047,9 +1047,9 @@ namespace SIP_Proxy_demo
             m_pDsSettings.Tables["Users"].Columns.Add("Password");
             m_pDsSettings.Tables["Users"].Columns.Add("AddressOfRecord");
 
-            if (File.Exists(Application.StartupPath + "/SIP-Proxy-Settings.xml"))
+            if (File.Exists(Application.StartupPath + "/Settings/SIP-Proxy-Settings.xml"))
             {
-                m_pDsSettings.ReadXml(Application.StartupPath + "/SIP-Proxy-Settings.xml");
+                m_pDsSettings.ReadXml(Application.StartupPath + "/Settings/SIP-Proxy-Settings.xml");
             }
 
             // Load SIP settings
@@ -1128,7 +1128,7 @@ namespace SIP_Proxy_demo
                 m_pDsSettings.Tables["Users"].Rows.Add(dr);
             }
 
-            m_pDsSettings.WriteXml(Application.StartupPath + "/SIP-Proxy-Settings.xml");
+            m_pDsSettings.WriteXml(Application.StartupPath + "/Settings/SIP-Proxy-Settings.xml");
         }
 
         #endregion

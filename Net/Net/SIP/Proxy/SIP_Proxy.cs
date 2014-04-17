@@ -7,6 +7,9 @@ using System.Timers;
 using LumiSoft.Net.AUTH;
 using LumiSoft.Net.SIP.Message;
 using LumiSoft.Net.SIP.Stack;
+using Security.Key;
+using Security.Cryptography;
+using Nickname;
 
 namespace LumiSoft.Net.SIP.Proxy
 {
@@ -47,6 +50,8 @@ namespace LumiSoft.Net.SIP.Proxy
         private  string                 m_Opaque         = "";
         internal List<SIP_ProxyContext> m_pProxyContexts = null;
         private  List<SIP_ProxyHandler> m_pHandlers      = null;
+        private Nicknameserviceprovider m_Nickname = new Nicknameserviceprovider();
+        private RSAcrypto m_RSA = null;
 
         /// <summary>
         /// Default constructor.
@@ -68,6 +73,8 @@ namespace LumiSoft.Net.SIP.Proxy
             m_Opaque         = Auth_HttpDigest.CreateOpaque();
             m_pProxyContexts = new List<SIP_ProxyContext>();
             m_pHandlers      = new List<SIP_ProxyHandler>();
+
+            m_RSA = new RSAcrypto();
         }
 
         #region method Dispose
@@ -285,8 +292,9 @@ namespace LumiSoft.Net.SIP.Proxy
         {
             SIP_RequestContext requestContext = new SIP_RequestContext(this,e.Request,e.Flow);
 
-            SIP_Request request = e.Request.Copy();
+            SIP_Request request = e.Request;
             SIP_Uri     route   = null;
+
             /* RFC 3261 16.
                 1. Validate the request (Section 16.3)
                     1. Reasonable Syntax
@@ -360,6 +368,75 @@ namespace LumiSoft.Net.SIP.Proxy
             }
 
             #endregion
+
+            #region SIP Security
+
+            SIP_Uri m_from = new SIP_Uri();
+            m_from.ParseInternal(request.From.Address.Uri.ToString());
+            SIP_Uri m_to = new SIP_Uri();
+            m_to.ParseInternal(request.To.Address.Uri.ToString());
+
+            if (m_from.Host == m_pStack.Realm && request.RequestLine.Method == SIP_Methods.INVITE && m_from.Host != m_to.Host)
+            {
+                
+                OfflineKeyServiceProvider m_offlinekey = new OfflineKeyServiceProvider(m_from.User, m_from.Address, m_from.User);
+
+                Offlinekey offkey = m_offlinekey.getOfflinekey(request.Hash.Parameters["tag"].Value);
+
+                if (!Hmac.versign(request.Hash.Value, request.DiffieHellman.Value, offkey.key))
+                {
+                    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x400_Bad_Request, e.Request));
+                    return;
+                }
+
+                m_from.User = m_Nickname.getNickname(m_from.User);
+                request.From.Parse(m_from.ToString());
+
+                StringReader contact = new StringReader(request.Contact.GetTopMostValue().ToStringValue());
+                request.Contact.RemoveTopMostValue();
+                SIP_Uri m_contact = new SIP_Uri();
+                m_contact = new SIP_Uri();
+                m_contact.ParseInternal(contact.ReadParenthesized());
+                m_contact.User = m_from.User;
+                request.Contact.Add(m_contact.ToString());
+                m_RSA.LoadPrivateFromXml(m_pStack.Realm);
+                request.Hash.Parse(RSAcrypto.PrivateEncryption(THashAlgorithm.ComputeHash(request.DiffieHellman.Value+m_from.User,THashAlgorithm.SHATYPE.SHA1),m_RSA.privatekey));
+
+
+            }
+            else if (m_to.Host == m_pStack.Realm && request.RequestLine.Method == SIP_Methods.INVITE && m_from.Host != m_to.Host)
+            {
+                m_RSA.LoadPublicFromXml(m_from.Host);
+
+                try
+                {
+                    string hash = RSAcrypto.PublicDecryption(request.Hash.Value, m_RSA.publickey);
+                    if (hash != THashAlgorithm.ComputeHash(request.DiffieHellman.Value + m_from.User, THashAlgorithm.SHATYPE.SHA1))
+                    {
+                        e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x400_Bad_Request, e.Request));
+                        return;
+                    }
+                }
+                catch (Exception)
+                {
+                    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x400_Bad_Request, e.Request));
+                    return;
+                }
+
+                m_RSA.LoadPrivateFromXml(m_pStack.Realm);
+                m_to.User = RSAcrypto.PrivateDecryption(m_to.User, m_RSA.privatekey);
+                request.To.Parse(m_to.ToString());
+                request.RequestLine.Uri = AbsoluteUri.Parse(m_to.ToString());
+
+                OfflineKeyServiceProvider m_offlinekey = new OfflineKeyServiceProvider(m_to.User, m_to.Address, m_to.User);
+                Offlinekey offkey = m_offlinekey.getOfflinekey();
+                string m_hmac = Hmac.sign(request.DiffieHellman.Value + m_from.User, offkey.key);
+                request.Hash = new SIP_t_Hash(m_hmac + ";tag=" + offkey.id);
+
+            }
+
+            #endregion
+
             #region 2. Preprocess routing information (Section 16.4).
 
             /*
@@ -832,7 +909,7 @@ namespace LumiSoft.Net.SIP.Proxy
                 e.ServerTransaction.SendResponse(notAuthenticatedResponse);
                 return false;
             }
-                                       
+
             Auth_HttpDigest auth = new Auth_HttpDigest(credentials.AuthData,e.Request.RequestLine.Method);
             // Check opaque validity.
             if(auth.Opaque != m_Opaque){

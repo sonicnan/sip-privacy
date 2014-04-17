@@ -255,7 +255,9 @@ namespace LumiSoft.SIP.UA.UI
             this.BeginInvoke(new MethodInvoker(delegate()
             {
                 m_pDisplayName.Text = to.Uri.ToString();
-
+                m_pStatusText.Text = "Calling";
+                m_pDuration.Text = "00:00:00";
+                m_pHangup.Enabled = false;
             }));
 
             m_pUACall = m_pUA.CreateCall(invite);
@@ -265,9 +267,6 @@ namespace LumiSoft.SIP.UA.UI
             this.BeginInvoke(new MethodInvoker(delegate()
             {
                 m_pUACall.StateChanged += new EventHandler(m_pCall_StateChanged);
-                m_pStatusText.Text = "Calling";
-                m_pDuration.Text = "00:00:00";
-                m_pHangup.Enabled = false;
 
             }));
         }
