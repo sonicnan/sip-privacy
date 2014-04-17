@@ -33,6 +33,7 @@ namespace LumiSoft.Net.SIP.UA
         private Dictionary<string,object> m_pTags                     = null;
         private object                    m_pLock                     = "";
         private bool m_pIncoming = false;
+        private DiffieHellman m_DH = null;
 
         /// <summary>
         /// Default outgoing call constructor.
@@ -85,6 +86,9 @@ namespace LumiSoft.Net.SIP.UA
             m_pRemoteUri = invite.Request.From.Address.Uri;
             m_pIncoming = true;
 
+            m_DH = new DiffieHellman(384).GenerateResponse(invite.Request.DiffieHellman.Value);
+            m_pInitialInviteTransaction.Request.DiffieHellman = new SIP_t_DiffieHellman(m_DH.ToString());
+            
             m_pInitialInviteTransaction.Canceled += new EventHandler(delegate(object sender,EventArgs e){
                 // If transaction canceled, terminate call.
                 SetState(SIP_UA_CallState.Terminated);
@@ -168,7 +172,29 @@ namespace LumiSoft.Net.SIP.UA
 
                     if(e.Response.StatusCodeType == SIP_StatusCodeType.Provisional){
                         if(e.Response.StatusCode == 180){
+
+                            SIP_Uri m_from = new SIP_Uri();
+                            m_from.ParseInternal(e.Response.From.Address.Uri.ToString());
+                            SIP_Uri m_to = new SIP_Uri();
+                            m_to.ParseInternal(e.Response.To.Address.Uri.ToString());
+
+                            OfflineKeyServiceProvider m_offlinekey = new OfflineKeyServiceProvider(m_from.User, m_from.Address, m_from.User);
+
+                            Offlinekey offkey = m_offlinekey.getOfflinekey(e.Response.Hash.Parameters["tag"].Value);
+
+                            if (!Hmac.versign(e.Response.Hash.Value, e.Response.DiffieHellman.Value + m_to.User, offkey.key))
+                            {
+                                throw new Exception("Hmac Error");
+                            }
+
+                            m_DH.HandleResponse(e.Response.DiffieHellman.Value);
+
+                            m_to.User = Aescrypto.DecryptStringFromBytes_Aes(m_to.User, m_DH.ToKeyAES(), m_DH.ToIVAES());
+                            string m_tag = e.Response.To.Parameters["tag"].Value;
+                            e.Response.To.Parse(m_to.ToString() + ";tag=" + m_tag);
+
                             SetState(SIP_UA_CallState.Ringing);
+
                         }
                         else if(e.Response.StatusCode == 182){
                             SetState(SIP_UA_CallState.Queued);
@@ -239,22 +265,11 @@ namespace LumiSoft.Net.SIP.UA
         /// <exception cref="InvalidOperationException">Is raised when call is not in valid state.</exception>
         public void Start()
         {
-            SIP_Uri m_from = new SIP_Uri();
-            m_from.ParseInternal(m_pInvite.From.Address.Uri.ToString());
-            OfflineKeyServiceProvider m_offlinekey = new OfflineKeyServiceProvider(m_from.User, m_from.Address, m_from.User);
 
-            SIP_Uri m_to =  new SIP_Uri();
-            m_to.ParseInternal(m_pInvite.To.Address.Uri.ToString());
-            RSAcrypto m_publickey = new RSAcrypto();
-            m_publickey.LoadPublicFromXml(m_to.Host);
-            m_to.User = RSAcrypto.PublicEncryption(m_to.User, m_publickey.publickey);
-            m_pInvite.To.Parse(m_to.ToString());
-            m_pInvite.RequestLine.Uri = AbsoluteUri.Parse(m_to.ToString());
-            DiffieHellman server = new DiffieHellman(384).GenerateRequest();
-            m_pInvite.DiffieHellman = new SIP_t_DiffieHellman(server.ToString());
-
-            Offlinekey offkey = m_offlinekey.getOfflinekey();
-            string m_hmac = Hmac.sign(server.ToString(),offkey.key);
+            m_DH = new DiffieHellman(384).GenerateRequest();
+            m_pInvite.DiffieHellman = new SIP_t_DiffieHellman(m_DH.ToString());
+            Offlinekey offkey = m_pUA.Offlinekey.getOfflinekey();
+            string m_hmac = Hmac.sign(m_DH.ToString(), offkey.key);
             m_pInvite.Hash = new SIP_t_Hash(m_hmac + ";tag=" + offkey.id);
 
             lock(m_pLock){
@@ -293,32 +308,21 @@ namespace LumiSoft.Net.SIP.UA
                 throw new InvalidOperationException("Accept method can be called only in 'SIP_UA_CallState.WaitingToAccept' state.");
             }
 
+            Offlinekey offkey = m_pUA.Offlinekey.getOfflinekey();
+            SIP_Uri m_to = new SIP_Uri();
+            m_to.ParseInternal(m_pInitialInviteTransaction.Request.To.Address.Uri.ToString());
+            string encrypted = Aescrypto.EncryptStringToBytes_Aes(m_to.User,m_DH.ToKeyAES(),m_DH.ToIVAES());
+            m_pInitialInviteTransaction.Request.To.Parse(m_to.ToString() + ";DH=" + encrypted);
+
+            string m_hmac = Hmac.sign(encrypted+m_DH.ToString(), offkey.key);
+            m_pInitialInviteTransaction.Request.Hash = new SIP_t_Hash(m_hmac + ";tag=" + offkey.id);
+
+
             SIP_Response response = m_pUA.Stack.CreateResponse(SIP_ResponseCodes.x180_Ringing, m_pInitialInviteTransaction.Request, m_pInitialInviteTransaction.Flow);
             
             m_pInitialInviteTransaction.SendResponse(response);
         }
 
-        /// <summary>
-        /// Sends ringing to remote party.
-        /// </summary>
-        public void SendRinging(SDP_Message sdp)
-        {
-            if(m_State == SIP_UA_CallState.Disposed){
-                throw new ObjectDisposedException(this.GetType().Name);
-            }
-            if(m_State != SIP_UA_CallState.WaitingToAccept){
-                throw new InvalidOperationException("Accept method can be called only in 'SIP_UA_CallState.WaitingToAccept' state.");
-            }
-
-            SIP_Response response = m_pUA.Stack.CreateResponse(SIP_ResponseCodes.x180_Ringing,m_pInitialInviteTransaction.Request,m_pInitialInviteTransaction.Flow);
-            if(sdp != null){
-                response.ContentType = "application/sdp";
-                response.Data = sdp.ToByte();
-
-                m_pLocalSDP = sdp;
-            }
-            m_pInitialInviteTransaction.SendResponse(response);
-        }
 
         #endregion
 

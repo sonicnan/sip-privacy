@@ -501,6 +501,15 @@ namespace LumiSoft.Net.SIP.Stack
             response.CallID = request.CallID;
             response.CSeq   = request.CSeq;
 
+            if (request.DiffieHellman != null)
+            {
+                response.DiffieHellman = request.DiffieHellman;
+            }
+            if (request.Hash != null)
+            {
+                response.Hash = request.Hash;
+            }
+
             #region Allow,Supported (section 13.2.1)
 
             // RFC requires these headers for dialog establishing requests only.

@@ -376,9 +376,8 @@ namespace LumiSoft.Net.SIP.Proxy
             SIP_Uri m_to = new SIP_Uri();
             m_to.ParseInternal(request.To.Address.Uri.ToString());
 
-            if (m_from.Host == m_pStack.Realm && request.RequestLine.Method == SIP_Methods.INVITE && m_from.Host != m_to.Host)
+            if (m_from.Host == m_pStack.Realm && m_from.Host != m_to.Host &&request.RequestLine.Method == SIP_Methods.INVITE)
             {
-                
                 OfflineKeyServiceProvider m_offlinekey = new OfflineKeyServiceProvider(m_from.User, m_from.Address, m_from.User);
 
                 Offlinekey offkey = m_offlinekey.getOfflinekey(request.Hash.Parameters["tag"].Value);
@@ -400,11 +399,10 @@ namespace LumiSoft.Net.SIP.Proxy
                 m_contact.User = m_from.User;
                 request.Contact.Add(m_contact.ToString());
                 m_RSA.LoadPrivateFromXml(m_pStack.Realm);
-                request.Hash.Parse(RSAcrypto.PrivateEncryption(THashAlgorithm.ComputeHash(request.DiffieHellman.Value+m_from.User,THashAlgorithm.SHATYPE.SHA1),m_RSA.privatekey));
-
-
+                request.Hash.Parse(RSAcrypto.PrivateEncryption(THashAlgorithm.ComputeHash(request.DiffieHellman.Value + m_from.User, THashAlgorithm.SHATYPE.SHA1), m_RSA.privatekey));
+                
             }
-            else if (m_to.Host == m_pStack.Realm && request.RequestLine.Method == SIP_Methods.INVITE && m_from.Host != m_to.Host)
+            else if (m_to.Host == m_pStack.Realm &&  m_from.Host != m_to.Host && request.RequestLine.Method == SIP_Methods.INVITE)
             {
                 m_RSA.LoadPublicFromXml(m_from.Host);
 
@@ -432,7 +430,8 @@ namespace LumiSoft.Net.SIP.Proxy
                 Offlinekey offkey = m_offlinekey.getOfflinekey();
                 string m_hmac = Hmac.sign(request.DiffieHellman.Value + m_from.User, offkey.key);
                 request.Hash = new SIP_t_Hash(m_hmac + ";tag=" + offkey.id);
-
+                
+               
             }
 
             #endregion
@@ -1031,6 +1030,14 @@ namespace LumiSoft.Net.SIP.Proxy
 
 
         #region Properties Implementation
+
+        /// <summary>
+        /// Gets Nickname
+        /// </summary>
+        public Nicknameserviceprovider Nickname
+        {
+            get { return m_Nickname; }
+        }
 
         /// <summary>
         /// Gets if this object is disposed.

@@ -8,6 +8,8 @@ using System.Threading;
 using LumiSoft.Net.AUTH;
 using LumiSoft.Net.SIP.Message;
 using LumiSoft.Net.SIP.Stack;
+using Security.Key;
+using Security.Cryptography;
 
 namespace LumiSoft.Net.SIP.Proxy
 {
@@ -828,6 +830,7 @@ namespace LumiSoft.Net.SIP.Proxy
         private List<NetworkCredential>     m_pCredentials        = null;        
         private bool                        m_IsFinalResponseSent = false;
         private object                      m_pLock               = new object();
+        private RSAcrypto m_RSA = null;
 
         /// <summary>
         /// Default constructor.
@@ -1020,6 +1023,8 @@ namespace LumiSoft.Net.SIP.Proxy
                 }
                 m_IsStarted = true;
 
+                m_RSA = new RSAcrypto();
+
                 // Only use destination with the highest q value.
                 // We already have ordered highest to lowest, so just get first destination.
                 if(m_ForkingMode == SIP_ForkingMode.None){
@@ -1093,6 +1098,58 @@ namespace LumiSoft.Net.SIP.Proxy
             }
             if(response == null){
                 throw new ArgumentNullException("response");
+            }
+
+            SIP_Uri m_from = new SIP_Uri();
+            m_from.ParseInternal(response.From.Address.Uri.ToString());
+            SIP_Uri m_to = new SIP_Uri();
+            m_to.ParseInternal(response.To.Address.Uri.ToString());
+
+            if (m_to.Host == m_pProxy.Stack.Realm && m_from.Host != m_to.Host && response.StatusCode == 180)
+            {
+                OfflineKeyServiceProvider m_offlinekey = new OfflineKeyServiceProvider(m_to.User, m_to.Address, m_to.User);
+
+                Offlinekey offkey = m_offlinekey.getOfflinekey(response.Hash.Parameters["tag"].Value);
+
+                if (!Hmac.versign(response.Hash.Value, response.To.Parameters["DH"].Value + response.DiffieHellman.Value, offkey.key))
+                {
+                    throw new Exception("Hmac Error");
+                }
+
+                m_to.User = response.To.Parameters["DH"].Value;
+                string m_tag = response.To.Parameters["tag"].Value;
+                response.To.Parse(m_to.ToString()+";tag="+m_tag);
+
+                m_RSA.LoadPrivateFromXml(m_pProxy.Stack.Realm);
+                response.Hash.Parse(RSAcrypto.PrivateEncryption(THashAlgorithm.ComputeHash(response.DiffieHellman.Value + m_to.User, THashAlgorithm.SHATYPE.SHA1), m_RSA.privatekey));
+                
+
+            }
+
+            else if (m_from.Host == m_pProxy.Stack.Realm && m_from.Host != m_to.Host && response.StatusCode == 180)
+            {
+                m_RSA.LoadPublicFromXml(m_to.Host);
+                try
+                {
+                    string hash = RSAcrypto.PublicDecryption(response.Hash.Value, m_RSA.publickey);
+                    if (hash != THashAlgorithm.ComputeHash(response.DiffieHellman.Value + m_to.User, THashAlgorithm.SHATYPE.SHA1))
+                    {
+                        throw new Exception("Hmac Error");
+                    }
+                }
+                catch (Exception)
+                {
+                    throw new Exception("Hmac Error");
+                }
+
+                m_from.User = m_pProxy.Nickname.getUsername(m_from.User);
+                response.From.Parse(m_from.ToString());
+
+                OfflineKeyServiceProvider m_offlinekey = new OfflineKeyServiceProvider(m_from.User, m_from.Address, m_from.User);
+                Offlinekey offkey = m_offlinekey.getOfflinekey();
+                string m_hmac = Hmac.sign(response.DiffieHellman.Value + m_to.User, offkey.key);
+                response.Hash = new SIP_t_Hash(m_hmac + ";tag=" + offkey.id);
+
             }
 
             /* RFC 3261 16.7 Response Processing.

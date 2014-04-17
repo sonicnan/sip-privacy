@@ -7,6 +7,8 @@ using LumiSoft.Net.Media.Codec.Audio;
 using LumiSoft.Net.SIP;
 using LumiSoft.Net.SIP.Stack;
 using LumiSoft.Net.SIP.Message;
+using Security.Key;
+using Security.Cryptography;
 
 namespace LumiSoft.Net.SIP.UA
 {
@@ -21,6 +23,7 @@ namespace LumiSoft.Net.SIP.UA
         private List<SIP_UA_Call> m_pCalls     = null;
         private List<SIP_UA_Registration> m_pRegistrations = null;
         private object            m_pLock      = new object();
+        private OfflineKeyServiceProvider m_offlinekey = null;
 
         /// <summary>
         /// Default constructor.
@@ -163,6 +166,22 @@ namespace LumiSoft.Net.SIP.UA
                 }
             }
             else if(e.Request.RequestLine.Method == SIP_Methods.INVITE){
+
+                SIP_Uri m_from = new SIP_Uri();
+                m_from.ParseInternal(e.Request.From.Address.Uri.ToString());
+                SIP_Uri m_to = new SIP_Uri();
+                m_to.ParseInternal(e.Request.To.Address.Uri.ToString());
+
+                m_offlinekey = new OfflineKeyServiceProvider(m_to.User, m_to.Address, m_to.User);
+
+                Offlinekey offkey = m_offlinekey.getOfflinekey(e.Request.Hash.Parameters["tag"].Value);
+
+                if (!Hmac.versign(e.Request.Hash.Value, e.Request.DiffieHellman.Value + m_from.User, offkey.key))
+                {
+                    e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x400_Bad_Request, e.Request));
+                    return;
+                }
+
                 // Supress INVITE retransmissions.
                 e.ServerTransaction.SendResponse(m_pStack.CreateResponse(SIP_ResponseCodes.x100_Trying,e.Request));
          
@@ -274,6 +293,19 @@ namespace LumiSoft.Net.SIP.UA
                 throw new ArgumentException("Argument 'invite' is not INVITE request.");
             }
 
+            SIP_Uri m_from = new SIP_Uri();
+            m_from.ParseInternal(invite.From.Address.Uri.ToString());
+            m_offlinekey = new OfflineKeyServiceProvider(m_from.User, m_from.Address, m_from.User);
+
+            SIP_Uri m_to = new SIP_Uri();
+            m_to.ParseInternal(invite.To.Address.Uri.ToString());
+            RSAcrypto m_publickey = new RSAcrypto();
+            m_publickey.LoadPublicFromXml(m_to.Host);
+            m_to.User = RSAcrypto.PublicEncryption(m_to.User, m_publickey.publickey);
+            invite.To.Parse(m_to.ToString());
+            invite.RequestLine.Uri = AbsoluteUri.Parse(m_to.ToString());
+
+
             lock(m_pLock){
                 SIP_UA_Call call = new SIP_UA_Call(this,invite);
                 call.StateChanged += new EventHandler(Call_StateChanged);
@@ -308,6 +340,22 @@ namespace LumiSoft.Net.SIP.UA
                 }
 
                 return m_pStack; 
+            }
+        }
+
+        /// <summary>
+        /// Gets OfflineKeyServiceProvider.
+        /// </summary>
+        public OfflineKeyServiceProvider Offlinekey
+        {
+            get
+            {
+                if (m_IsDisposed)
+                {
+                    throw new ObjectDisposedException(this.GetType().Name);
+                }
+
+                return m_offlinekey;
             }
         }
 
